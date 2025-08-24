@@ -1,0 +1,4 @@
+#Sat Aug 23 15:05:38 CST 2025
+base.0=E\:\\project\\basketball_score\\app\\build\\intermediates\\dex\\release\\mergeDexRelease\\classes.dex
+path.0=classes.dex
+renamed.0=classes.dex

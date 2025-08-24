@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.basketball.scoreremote.app-mergeReleaseResources-2:/values-watch-v21/values-watch-v21.xml",
+            "map": [
+                {
+                    "source": "F:\\SOFT\\Develop\\gradle-8.14.3\\caches\\8.14.3\\transforms\\9581d3a64f024668ce612bc76a75cc13\\transformed\\appcompat-1.6.1\\res\\values-watch-v21\\values-watch-v21.xml",
+                    "from": {
+                        "startLines": "2,6,10",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,271,499",
+                        "endLines": "5,9,13",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "266,494,724"
+                    }
+                }
+            ]
+        }
+    ]
+}

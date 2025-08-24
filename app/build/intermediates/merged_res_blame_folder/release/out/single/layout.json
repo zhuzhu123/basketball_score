@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.basketball.scoreremote.app-mergeReleaseResources-3:/layout/activity_main.xml",
+        "source": "com.basketball.scoreremote.app-main-5:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.basketball.scoreremote.app-mergeReleaseResources-3:/layout/dialog_edit_quarter.xml",
+        "source": "com.basketball.scoreremote.app-main-5:/layout/dialog_edit_quarter.xml"
+    }
+]

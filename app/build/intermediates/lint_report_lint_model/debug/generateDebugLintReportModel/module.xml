@@ -1,0 +1,19 @@
+<lint-module
+    format="1"
+    dir="E:\project\basketball_score\app"
+    name=":app"
+    type="APP"
+    maven="Basketball Score Remote:app:"
+    agpVersion="8.2.0"
+    buildFolder="build"
+    bootClassPath="G:\Android\Sdk\platforms\android-34\android.jar;G:\Android\Sdk\build-tools\34.0.0\core-lambda-stubs.jar"
+    javaSourceLevel="1.8"
+    compileTarget="android-34"
+    neverShrinking="true">
+  <lintOptions
+      baselineFile="lint-baseline.xml"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="debug"/>
+</lint-module>

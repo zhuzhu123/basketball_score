@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">篮球计分遥控器</string>
+    <string name="bluetooth_connecting">正在连接蓝牙设备...</string>
+    <string name="bluetooth_connected">蓝牙已连接</string>
+    <string name="bluetooth_disconnected">蓝牙已断开</string>
+    <string name="bluetooth_scan">扫描蓝牙设备</string>
+    <string name="bluetooth_enable">启用蓝牙</string>
+    <string name="bluetooth_permission_required">需要蓝牙权限才能使用此功能</string>
+    <string name="home_team">龙都F4</string>
+    <string name="away_team">暴风队</string>
+    <string name="score_plus_1">+1</string>
+    <string name="score_plus_2">+2</string>
+    <string name="score_plus_3">+3</string>
+    <string name="score_minus_1">-1</string>
+    <string name="reset_score">重置比分</string>
+    <string name="timeout">暂停</string>
+    <string name="quarter">节次</string>
+    <string name="time">时间</string>
+    <string name="start_timer">开始计时</string>
+    <string name="pause_timer">暂停计时</string>
+    <string name="device_not_found">未找到指定的蓝牙设备</string>
+    <string name="connection_failed">连接失败</string>
+</resources> 

@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.basketball.scoreremote.app-mergeDebugResources-3:/layout/dialog_edit_quarter.xml",
+        "source": "com.basketball.scoreremote.app-main-6:/layout/dialog_edit_quarter.xml"
+    },
+    {
+        "merged": "F:\\SOFT\\Develop\\gradle-8.14.3\\daemon\\8.14.3\\com.basketball.scoreremote.app-mergeDebugResources-3:\\layout\\activity_main.xml",
+        "source": "F:\\SOFT\\Develop\\gradle-8.14.3\\daemon\\8.14.3\\com.basketball.scoreremote.app-main-6:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "F:\\SOFT\\Develop\\gradle-8.14.3\\daemon\\8.14.3\\com.basketball.scoreremote.app-mergeDebugResources-3:\\layout\\dialog_edit_quarter.xml",
+        "source": "F:\\SOFT\\Develop\\gradle-8.14.3\\daemon\\8.14.3\\com.basketball.scoreremote.app-main-6:\\layout\\dialog_edit_quarter.xml"
+    },
+    {
+        "merged": "com.basketball.scoreremote.app-mergeDebugResources-3:/layout/activity_main.xml",
+        "source": "com.basketball.scoreremote.app-main-6:/layout/activity_main.xml"
+    }
+]
