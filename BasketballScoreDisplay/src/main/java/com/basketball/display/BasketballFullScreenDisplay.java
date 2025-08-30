@@ -66,6 +66,9 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
     private JLabel quarter2Label;
     private JLabel quarter3Label;
     private JLabel quarter4Label;
+    private JLabel quarter5Label;
+    private JLabel quarter6Label;
+    private JLabel quarter7Label;
     private JLabel totalScoreLabel;
     private JLabel currentQuarterLabel; // 当前节次显示标签
     
@@ -681,6 +684,9 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         quarter2Label = new JLabel("第2节: 0-0");
         quarter3Label = new JLabel("第3节: 0-0");
         quarter4Label = new JLabel("第4节: 0-0");
+        quarter5Label = new JLabel("第5节: 0-0");
+        quarter6Label = new JLabel("第6节: 0-0");
+        quarter7Label = new JLabel("第7节: 0-0");
         
         // 设置标签样式
         Font quarterFont = new Font("微软雅黑", Font.BOLD, 16);
@@ -694,11 +700,20 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         quarter3Label.setForeground(quarterColor);
         quarter4Label.setFont(quarterFont);
         quarter4Label.setForeground(quarterColor);
+        quarter5Label.setFont(quarterFont);
+        quarter5Label.setForeground(quarterColor);
+        quarter6Label.setFont(quarterFont);
+        quarter6Label.setForeground(quarterColor);
+        quarter7Label.setFont(quarterFont);
+        quarter7Label.setForeground(quarterColor);
         
         quarterScoresPanel.add(quarter1Label);
         quarterScoresPanel.add(quarter2Label);
         quarterScoresPanel.add(quarter3Label);
         quarterScoresPanel.add(quarter4Label);
+        quarterScoresPanel.add(quarter5Label);
+        quarterScoresPanel.add(quarter6Label);
+        quarterScoresPanel.add(quarter7Label);
         
         // 总比分显示
         JPanel totalScorePanel = new JPanel();
@@ -872,7 +887,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
     private void handleQuarterChange(String value) {
         try {
             int newQuarter = Integer.parseInt(value);
-            if (newQuarter >= 1 && newQuarter <= 4) {
+            if (newQuarter >= 1 && newQuarter <= 7) {
                 // 保存当前节次的比分到数据库
                 if (currentMatchId > 0 && (homeScore > 0 || awayScore > 0)) {
                     try {
@@ -1154,6 +1169,9 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         if (quarter2Label != null) quarter2Label.setText("第2节: 0-0");
         if (quarter3Label != null) quarter3Label.setText("第3节: 0-0");
         if (quarter4Label != null) quarter4Label.setText("第4节: 0-0");
+        if (quarter5Label != null) quarter5Label.setText("第5节: 0-0");
+        if (quarter6Label != null) quarter6Label.setText("第6节: 0-0");
+        if (quarter7Label != null) quarter7Label.setText("第7节: 0-0");
         
         // 根据数据库数据更新标签
         for (DatabaseManager.QuarterScore quarterScore : quarterScores) {
@@ -1167,6 +1185,9 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                 case 2: targetLabel = quarter2Label; break;
                 case 3: targetLabel = quarter3Label; break;
                 case 4: targetLabel = quarter4Label; break;
+                case 5: targetLabel = quarter5Label; break;
+                case 6: targetLabel = quarter6Label; break;
+                case 7: targetLabel = quarter7Label; break;
             }
             
             if (targetLabel != null) {
@@ -1201,7 +1222,8 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                 }
                 
                 // 更新中间区域的比分显示
-                if (quarter1Label != null && quarter2Label != null && quarter3Label != null && quarter4Label != null) {
+                if (quarter1Label != null && quarter2Label != null && quarter3Label != null && quarter4Label != null &&
+                    quarter5Label != null && quarter6Label != null && quarter7Label != null) {
                     // 高亮当前节次标签
                     JLabel currentLabel = null;
                     switch (currentQuarter) {
@@ -1209,6 +1231,9 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                         case 2: currentLabel = quarter2Label; break;
                         case 3: currentLabel = quarter3Label; break;
                         case 4: currentLabel = quarter4Label; break;
+                        case 5: currentLabel = quarter5Label; break;
+                        case 6: currentLabel = quarter6Label; break;
+                        case 7: currentLabel = quarter7Label; break;
                     }
                     if (currentLabel != null) {
                         currentLabel.setForeground(new Color(255, 215, 0)); // 金色高亮
