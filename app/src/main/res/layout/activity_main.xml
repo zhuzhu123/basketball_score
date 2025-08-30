@@ -438,14 +438,43 @@
                     <Button
                         android:id="@+id/btnStartTimer"
                         style="@style/GameButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="60dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
                         android:text="@string/start_timer"
+                        android:textSize="16sp"
                         android:backgroundTint="@color/button_enabled" />
 
                     <Button
                         android:id="@+id/btnPauseTimer"
                         style="@style/GameButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="60dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
                         android:text="@string/pause_timer"
+                        android:textSize="16sp"
                         android:backgroundTint="@color/button_disabled" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp">
+
+                    <Button
+                        android:id="@+id/btnContinueTimer"
+                        style="@style/GameButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="60dp"
+                        android:layout_weight="1"
+                        android:text="继续倒计时"
+                        android:textSize="16sp"
+                        android:backgroundTint="@color/basketball_green" />
 
                 </LinearLayout>
 

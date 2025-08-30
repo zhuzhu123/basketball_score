@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     private TextView tvQuarter;
     private Button btnHomePlus1, btnHomePlus2, btnHomePlus3, btnHomeMinus1;
     private Button btnAwayPlus1, btnAwayPlus2, btnAwayPlus3, btnAwayMinus1;
-    private Button btnResetScore, btnTimeout, btnStartTimer, btnPauseTimer, btnNextQuarter;
+    private Button btnResetScore, btnTimeout, btnStartTimer, btnPauseTimer, btnContinueTimer, btnNextQuarter;
     
     // 比赛管理UI组件
     private View layoutMatchInfo;
@@ -60,6 +60,10 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     private int totalAwayScore = 0;
     private int lastTotalAwayScore = 0;
     private boolean isMatchStarted = false;
+    
+    // 倒计时状态管理
+    private boolean isTimerRunning = false;
+    private boolean isTimerPaused = false;
     
     // 权限请求
     private final ActivityResultLauncher<String[]> bluetoothPermissionLauncher = 
@@ -122,6 +126,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         btnTimeout = findViewById(R.id.btnTimeout);
         btnStartTimer = findViewById(R.id.btnStartTimer);
         btnPauseTimer = findViewById(R.id.btnPauseTimer);
+        btnContinueTimer = findViewById(R.id.btnContinueTimer);
         btnNextQuarter = findViewById(R.id.btnNextQuarter);
         
         // 比赛管理UI组件
@@ -170,6 +175,13 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         btnTimeout.setOnClickListener(v -> callTimeout());
         btnStartTimer.setOnClickListener(v -> startTimer());
         btnPauseTimer.setOnClickListener(v -> pauseTimer());
+        btnContinueTimer.setOnClickListener(v -> continueTimer());
+        
+        // 设置倒计时按钮初始状态
+        btnStartTimer.setEnabled(true);
+        btnPauseTimer.setEnabled(false);
+        btnContinueTimer.setEnabled(false);
+        
         btnNextQuarter.setOnClickListener(v -> nextQuarter());
         
         // 比赛管理按钮
@@ -356,16 +368,44 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     
     private void startTimer() {
         if (bluetoothManager != null) {
-            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Timer("START"));
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Timer("START_COUNTDOWN"));
+            isTimerRunning = true;
+            isTimerPaused = false;
+            
+            // 更新按钮状态
+            btnStartTimer.setEnabled(false);
+            btnPauseTimer.setEnabled(true);
+            btnContinueTimer.setEnabled(false);
         }
         showToast("计时开始");
     }
     
     private void pauseTimer() {
         if (bluetoothManager != null) {
-            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Timer("PAUSE"));
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Timer("STOP_COUNTDOWN"));
+            isTimerRunning = false;
+            isTimerPaused = true;
+            
+            // 更新按钮状态
+            btnStartTimer.setEnabled(false);
+            btnPauseTimer.setEnabled(false);
+            btnContinueTimer.setEnabled(true);
         }
         showToast("计时暂停");
+    }
+
+    private void continueTimer() {
+        if (bluetoothManager != null) {
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Timer("CONTINUE_COUNTDOWN"));
+            isTimerRunning = true;
+            isTimerPaused = false;
+            
+            // 更新按钮状态
+            btnStartTimer.setEnabled(false);
+            btnPauseTimer.setEnabled(true);
+            btnContinueTimer.setEnabled(false);
+        }
+        showToast("继续倒计时");
     }
     
     private void nextQuarter() {
@@ -767,7 +807,9 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
             showToast("第" + currentQuarter + "节结束！");
             
             // 更新总分
-
+            totalHomeScore += homeScore;
+            totalAwayScore += awayScore;
+            
             // 自动保存本节
             saveCurrentQuarter();
             

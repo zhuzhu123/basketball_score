@@ -868,6 +868,12 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                                 resetScore();
                                 showScorePanel();
                                 break;
+                            case "GET_ALL_MATCHES":
+                                handleGetAllMatches(); // 不需要参数
+                                break;
+                            case "SELECT_MATCH":
+                                handleSelectMatch(value);
+                                break;
                             case "SYNC_ALL_SCORES":
                                 handleSyncAllScores(); // 不需要参数
                                 break;
@@ -1012,6 +1018,86 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         } catch (Exception e) {
             System.err.println("处理新建比赛命令失败: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 处理选择比赛命令
+     */
+    private void handleSelectMatch(String value) {
+        try {
+            int matchId = Integer.parseInt(value);
+            System.out.println("收到选择比赛命令，比赛ID: " + matchId);
+            
+            // 设置当前比赛ID
+            currentMatchId = matchId;
+            
+            // 从数据库获取比赛信息
+            if (databaseManager != null) {
+                DatabaseManager.MatchInfo matchInfo = databaseManager.getMatchInfo(matchId);
+                if (matchInfo != null) {
+                    currentMatchName = matchInfo.getMatchName();
+                    currentMatchNote = matchInfo.getMatchNote();
+                    
+                    // 获取该比赛的所有节次比分
+                    List<DatabaseManager.QuarterScore> quarterScores = databaseManager.getQuarterScores(matchId);
+                    
+                    // 更新UI显示
+                    updateMatchInfoDisplay();
+                    updateQuarterScoresDisplay();
+                    
+                    // 播报选择比赛信息
+                    WindowsTTS.speakAsync("已选择比赛：" + currentMatchName);
+                    
+                    System.out.println("已选择比赛: " + currentMatchName);
+                }
+            }
+            
+        } catch (NumberFormatException e) {
+            System.err.println("比赛ID格式错误: " + value);
+        } catch (Exception e) {
+            System.err.println("处理选择比赛命令失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 处理获取所有比赛命令
+     */
+    private void handleGetAllMatches() {
+        if (databaseManager != null) {
+            try {
+                System.out.println("收到获取所有比赛命令");
+                
+                // 从数据库获取所有比赛
+                List<DatabaseManager.MatchInfo> matches = databaseManager.getAllMatches();
+                
+                // 发送比赛列表到手机端
+                if (matches != null && !matches.isEmpty()) {
+                    for (DatabaseManager.MatchInfo match : matches) {
+                        String matchData = "MATCH_INFO:" + match.getId() + "|" + 
+                                         match.getMatchName() + "|" + 
+                                         match.getMatchNote() + "|" + 
+                                         match.getTotalHomeScore() + "|" + 
+                                         match.getTotalAwayScore() + "|" + 
+                                         match.getCreatedAt();
+                        bluetoothManager.sendDataToMobile(matchData);
+                    }
+                    
+                    // 发送结束标记
+                    bluetoothManager.sendDataToMobile("MATCH_LIST_END");
+                    System.out.println("已发送" + matches.size() + "场比赛信息到手机端");
+                } else {
+                    bluetoothManager.sendDataToMobile("NO_MATCHES_FOUND");
+                    System.out.println("没有找到已存在的比赛");
+                }
+                
+            } catch (Exception e) {
+                System.err.println("处理获取所有比赛命令失败: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.err.println("数据库管理器未初始化");
         }
     }
     

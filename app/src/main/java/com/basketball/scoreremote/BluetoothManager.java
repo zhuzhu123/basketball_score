@@ -269,7 +269,7 @@ public class BluetoothManager {
         } else if (command instanceof ScoreCommand.Quarter) {
             commandString = "QUARTER:" + ((ScoreCommand.Quarter) command).getQuarter();
         } else if (command instanceof ScoreCommand.Timer) {
-            commandString = "TIMER:" + ((ScoreCommand.Timer) command).getAction();
+            commandString = ((ScoreCommand.Timer) command).getAction();
         } else if (command instanceof ScoreCommand.NewMatch) {
             ScoreCommand.NewMatch newMatch = (ScoreCommand.NewMatch) command;
             commandString = "NEW_MATCH:" + newMatch.getMatchName() + "|" + newMatch.getMatchNote();

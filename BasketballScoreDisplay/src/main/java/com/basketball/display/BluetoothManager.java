@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.*;
+import java.util.List;
 import javax.swing.SwingUtilities;
 
 /**
@@ -240,6 +241,44 @@ public class BluetoothManager {
     }
     
 
+    /**
+     * 处理获取所有比赛命令
+     */
+    private void handleGetAllMatches(String value) {
+        try {
+            System.out.println("收到获取所有比赛命令");
+            
+            // 从数据库获取所有比赛
+            List<DatabaseManager.MatchInfo> matches = databaseManager.getAllMatches();
+            
+            // 发送比赛列表到手机端
+            if (matches != null && !matches.isEmpty()) {
+                for (DatabaseManager.MatchInfo match : matches) {
+                    String matchData = "MATCH_INFO:" + match.getId() + "|" + 
+                                     match.getMatchName() + "|" + 
+                                     match.getMatchNote() + "|" + 
+                                     match.getTotalHomeScore() + "|" + 
+                                     match.getTotalAwayScore() + "|" + 
+                                     match.getCreatedAt();
+                    sendDataToMobile(matchData);
+                }
+                
+                // 发送结束标记
+                sendDataToMobile("MATCH_LIST_END");
+                System.out.println("已发送" + matches.size() + "场比赛信息到手机端");
+            } else {
+                sendDataToMobile("NO_MATCHES_FOUND");
+                System.out.println("没有找到已存在的比赛");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("处理获取所有比赛命令失败: " + e.getMessage());
+            if (callback != null) {
+                callback.onError("处理获取所有比赛命令失败: " + e.getMessage());
+            }
+        }
+    }
+    
     /**
      * 处理同步所有分数命令
      */
