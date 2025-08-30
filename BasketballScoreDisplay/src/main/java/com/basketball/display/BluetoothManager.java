@@ -117,7 +117,7 @@ public class BluetoothManager {
             }
             
                 // 修复死循环：添加退出条件
-                while (!shouldStop) {
+//                while (!shouldStop) {
                 try {
                     // 5. 等待客户端连接（完全复制 BluetoothServer.java 的代码）
                     connection = notifier.acceptAndOpen();
@@ -142,11 +142,11 @@ public class BluetoothManager {
                             Thread.sleep(2000);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
-                            break;
+//                            break;
                         }
                     }
                 }
-            }
+//            }
         } catch (Exception e) {
             System.err.println("蓝牙服务器启动失败: " + e.getMessage());
             if (callback != null) {
@@ -239,30 +239,7 @@ public class BluetoothManager {
         }
     }
     
-    /**
-     * 处理保存比赛命令
-     */
-    private void handleSaveMatch(String value) throws Exception {
-        String[] parts = value.split("\\|");
-        if (parts.length >= 3) {
-            String matchName = parts[0];
-            int totalHomeScore = Integer.parseInt(parts[1]);
-            int totalAwayScore = Integer.parseInt(parts[2]);
-            
-            int matchId = getCurrentMatchId();
-            if (matchId > 0) {
-                boolean success = databaseManager.updateMatchTotalScore(matchId, totalHomeScore, totalAwayScore);
-                System.out.println("保存比赛总分: " + matchName + " " + totalHomeScore + "-" + totalAwayScore);
-                
-                if (callback != null) {
-                    callback.onMatchSaved(matchName, totalHomeScore, totalAwayScore);
-                }
-                
-                sendResponse(success ? "MATCH_SAVED" : "MATCH_SAVE_FAILED");
-            }
-        }
-    }
-    
+
     /**
      * 处理同步所有分数命令
      */

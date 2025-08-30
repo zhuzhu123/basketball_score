@@ -56,7 +56,9 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     private String matchName = "";
     private String matchNote = "";
     private int totalHomeScore = 0;
+    private int lastTotalHomeScore = 0;
     private int totalAwayScore = 0;
+    private int lastTotalAwayScore = 0;
     private boolean isMatchStarted = false;
     
     // 权限请求
@@ -382,8 +384,8 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         previousQuarterAwayScore = awayScore;
         
         // 更新总分
-        totalHomeScore += homeScore;
-        totalAwayScore += awayScore;
+        lastTotalHomeScore += homeScore;
+        lastTotalAwayScore += awayScore;
         
         // 保存当前节次比分
         saveCurrentQuarter();
@@ -755,10 +757,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         tvCurrentQuarter.setText("当前节次：第" + currentQuarter + "节");
         tvQuarterScore.setText("本节比分：" + homeScore + " : " + awayScore);
         
-        // 显示当前累计总分（之前节次的总分 + 当前节次比分）
-        int currentTotalHomeScore = totalHomeScore + homeScore;
-        int currentTotalAwayScore = totalAwayScore + awayScore;
-        tvTotalScore.setText("总比分：" + currentTotalHomeScore + " : " + currentTotalAwayScore);
+        tvTotalScore.setText("总比分：" + totalHomeScore + " : " + totalAwayScore);
     }
     
     // 检查是否达到20分
@@ -768,9 +767,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
             showToast("第" + currentQuarter + "节结束！");
             
             // 更新总分
-            totalHomeScore += homeScore;
-            totalAwayScore += awayScore;
-            
+
             // 自动保存本节
             saveCurrentQuarter();
             
@@ -828,15 +825,15 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
      */
     private void updateTotalScoreAndSave() {
         // 计算当前累计总分（之前节次的总分 + 当前节次比分）
-        int currentTotalHomeScore = totalHomeScore + homeScore;
-        int currentTotalAwayScore = totalAwayScore + awayScore;
+        totalHomeScore = lastTotalHomeScore + homeScore;
+        totalAwayScore = lastTotalAwayScore + awayScore;
         
         // 更新显示
         updateMatchInfo();
         
         // 发送更新总比分命令到PC（显示当前累计总分）
         if (bluetoothManager != null) {
-            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.SaveMatch(matchName, currentTotalHomeScore, currentTotalAwayScore));
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.SaveMatch(matchName, totalHomeScore, totalAwayScore));
         }
     }
 

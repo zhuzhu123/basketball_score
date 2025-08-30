@@ -390,7 +390,10 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                 @Override
                 public void onDataReceived(String data) {
                     System.out.println("接收数据: " + data);
-                    processBluetoothCommand(data);
+                    String[] commands = data.split(";");
+                    for (String cmd : commands) {
+                        processBluetoothCommand(cmd);
+                    }
                 }
                 
                 @Override
@@ -411,7 +414,6 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                 @Override
                 public void onMatchSaved(String matchName, int totalHomeScore, int totalAwayScore) {
                     System.out.println("比赛保存: " + matchName + " " + totalHomeScore + "-" + totalAwayScore);
-                    updateTotalScoreDisplay();
                 }
             });
             
@@ -434,18 +436,16 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         homeScore += points;
         if (homeScore < 0) homeScore = 0;
         
-        // 更新UI显示
+        // 更新UI显示 - 中间区域显示当前节次比分
         if (homeScoreLabel != null) {
             homeScoreLabel.setText(String.valueOf(homeScore));
         }
         
-        // 更新总分
-        updateTotalScoreDisplay();
-        
+
         // 检查游戏是否结束
         checkGameEnd();
         
-        System.out.println("龙都F4得分更新: " + homeScore);
+        System.out.println("龙都F4当前节次得分更新: " + homeScore);
     }
     
     /**
@@ -455,18 +455,16 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         awayScore += points;
         if (awayScore < 0) awayScore = 0;
         
-        // 更新UI显示
+        // 更新UI显示 - 中间区域显示当前节次比分
         if (awayScoreLabel != null) {
             awayScoreLabel.setText(String.valueOf(awayScore));
         }
         
-        // 更新总分
-        updateTotalScoreDisplay();
-        
+
         // 检查游戏是否结束
         checkGameEnd();
         
-        System.out.println("暴风队得分更新: " + awayScore);
+        System.out.println("暴风队当前节次得分更新: " + awayScore);
     }
     
     /**
@@ -551,14 +549,16 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
      * 重置比分
      */
     private void resetScore() {
+        // 重置当前节次比分（中间区域显示）
         homeScore = 0;
         awayScore = 0;
         homeScoreLabel.setText("0");
         awayScoreLabel.setText("0");
-        System.out.println("比分已重置");
+        
+        System.out.println("当前节次比分已重置");
         
         // 播报重置信息
-        WindowsTTS.speakAsync("比分已重置");
+        WindowsTTS.speakAsync("当前节次比分已重置");
     }
     
     /**
@@ -806,6 +806,9 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         
         try {
                                     switch (cmdName) {
+                            case "NEW_MATCH":
+                                handleNewMatch(value);
+                                break;
                             case "SAVE_QUARTER":
                                 handleSaveQuarter(value);
                                 break;
@@ -888,11 +891,11 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                 // 更新当前节次
                 currentQuarter = newQuarter;
                 
-                // 重置当前比分
+                // 重置当前比分（中间区域显示当前节次比分）
                 homeScore = 0;
                 awayScore = 0;
                 
-                // 更新UI显示
+                // 更新UI显示 - 中间区域显示当前节次比分
                 if (homeScoreLabel != null) {
                     homeScoreLabel.setText("0");
                 }
@@ -908,9 +911,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                 // 更新节次显示
                 updateQuarterScoresDisplay();
                 
-                // 更新总比分显示
-                updateTotalScoreDisplay();
-                
+
                 // 确保当前节次标签高亮显示
                 updateQuarterLabels();
                 
@@ -952,6 +953,54 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
     }
     
     /**
+     * 处理新建比赛命令
+     */
+    private void handleNewMatch(String value) {
+        try {
+            String[] parts = value.split("\\|");
+            if (parts.length >= 2) {
+                String matchName = parts[0];
+                String matchNote = parts[1];
+                
+                // 创建新比赛
+                if (databaseManager != null) {
+                    currentMatchId = databaseManager.createNewMatch(matchName, matchNote);
+                    currentMatchName = matchName;
+                    currentMatchNote = matchNote;
+                    
+                    // 重置比赛数据
+                    currentQuarter = 1;
+                    homeScore = 0;
+                    awayScore = 0;
+                    totalHomeScore = 0;
+                    totalAwayScore = 0;
+                    
+                    // 更新UI显示
+                    updateMatchInfoDisplay();
+                    updateQuarterScoresDisplay();
+
+                    // 重置比分显示
+                    if (homeScoreLabel != null) {
+                        homeScoreLabel.setText("0");
+                    }
+                    if (awayScoreLabel != null) {
+                        awayScoreLabel.setText("0");
+                    }
+                    if (currentQuarterLabel != null) {
+                        currentQuarterLabel.setText("第1节");
+                    }
+                    
+                    System.out.println("新建比赛: " + matchName + ", 备注: " + matchNote);
+                    WindowsTTS.speakAsync("新建比赛：" + matchName);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("处理新建比赛命令失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
      * 处理保存比赛命令
      */
     private void handleSaveMatch(String value) {
@@ -962,7 +1011,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                     String matchName = parts[0];
                     int totalHomeScore = Integer.parseInt(parts[1]);
                     int totalAwayScore = Integer.parseInt(parts[2]);
-                    
+                    updateTotalScoreDisplay(totalHomeScore, totalAwayScore);
                     databaseManager.updateMatchTotalScore(currentMatchId, totalHomeScore, totalAwayScore);
                     System.out.println("处理保存比赛命令: " + totalHomeScore + "-" + totalAwayScore);
                 }
@@ -995,18 +1044,12 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                         System.out.println("第" + qs.getQuarterNumber() + "节: " + qs.getHomeScore() + "-" + qs.getAwayScore());
                     }
                     
-                    // 更新当前比分显示
-                    this.homeScore = totalHomeScore;
-                    this.awayScore = totalAwayScore;
+                    // 注意：这里不应该更新当前节次比分，因为中间区域应该显示当前节次比分
+                    // 累计总分应该在顶部面板显示，由updateTotalScoreDisplay()处理
                     
-                    // 更新UI显示
-                    if (homeScoreLabel != null) {
-                        homeScoreLabel.setText(String.valueOf(totalHomeScore));
-                    }
-                    if (awayScoreLabel != null) {
-                        awayScoreLabel.setText(String.valueOf(totalAwayScore));
-                    }
-                    updateTotalScoreDisplay();
+                    // 中间区域保持显示当前节次比分，不显示累计总分
+                    System.out.println("同步完成，累计总分: " + totalHomeScore + "-" + totalAwayScore + 
+                                     "，当前节次比分: " + this.homeScore + "-" + this.awayScore);
                     
                     // 更新节次比分显示
                     updateQuarterScoresDisplay();
@@ -1182,13 +1225,13 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
     /**
      * 更新总比分显示
      */
-    private void updateTotalScoreDisplay() {
+    private void updateTotalScoreDisplay(int totalHomeScoreP, int totalAwayScoreP) {
         try {
             if (currentMatchId > 0) {
                 // 优先使用当前内存中的比分，确保数据一致性
-                if (homeScore > 0 || awayScore > 0) {
-                    totalHomeScore = homeScore;
-                    totalAwayScore = awayScore;
+                if (totalHomeScoreP > 0 || totalAwayScoreP > 0) {
+                    totalHomeScore = totalHomeScoreP;
+                    totalAwayScore = totalAwayScoreP;
                     
                     if (totalScoreLabel != null) {
                         totalScoreLabel.setText("总比分：" + totalHomeScore + " - " + totalAwayScore);

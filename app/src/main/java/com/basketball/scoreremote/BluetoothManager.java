@@ -275,7 +275,7 @@ public class BluetoothManager {
             commandString = "NEW_MATCH:" + newMatch.getMatchName() + "|" + newMatch.getMatchNote();
         } else if (command instanceof ScoreCommand.SaveQuarter) {
             ScoreCommand.SaveQuarter saveQuarter = (ScoreCommand.SaveQuarter) command;
-            commandString = "SAVE_QUARTER:" + saveQuarter.getQuarter() + "|" + saveQuarter.getHomeScore() + "|" + saveQuarter.getAwayScore() + " ";
+            commandString = "SAVE_QUARTER:" + saveQuarter.getQuarter() + "|" + saveQuarter.getHomeScore() + "|" + saveQuarter.getAwayScore();
         } else if (command instanceof ScoreCommand.SaveMatch) {
             ScoreCommand.SaveMatch saveMatch = (ScoreCommand.SaveMatch) command;
             commandString = "SAVE_MATCH:" + saveMatch.getMatchName() + "|" + saveMatch.getTotalHomeScore() + "|" + saveMatch.getTotalAwayScore();
@@ -595,7 +595,8 @@ public class BluetoothManager {
         if (isConnected && outputStream != null) {
             executorService.execute(() -> {
                 try {
-                    outputStream.write(data.getBytes());
+                    outputStream.write((data + ";").getBytes());
+                    outputStream.flush();
                     Log.d(TAG, "蓝牙发送到PC: " + data);
                 } catch (IOException e) {
                     Log.e(TAG, "蓝牙发送数据失败", e);
