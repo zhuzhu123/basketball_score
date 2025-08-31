@@ -44,6 +44,7 @@ public class BluetoothManager {
     private OutputStream outputStream;
     private boolean isConnected = false;
     private BluetoothCallback callback;
+    private DataCallback dataCallback; // 新增：用于处理PC端返回的数据
     private final ExecutorService executorService;
     private final Handler mainHandler;
     
@@ -68,6 +69,12 @@ public class BluetoothManager {
         void onDeviceFound(BluetoothDevice device);
     }
     
+    // 数据回调接口
+    public interface DataCallback {
+        void onPreviousQuarterData(int quarterNumber, int homeScore, int awayScore);
+        void onTotalScoreUpdate(int totalHomeScore, int totalAwayScore);
+    }
+    
     public BluetoothManager(Context context) {
         this.context = context;
         this.bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -77,6 +84,19 @@ public class BluetoothManager {
     
     public void setCallback(BluetoothCallback callback) {
         this.callback = callback;
+    }
+    
+    /**
+     * 设置数据回调（用于处理PC端返回的数据）
+     */
+    public void setDataCallback(DataCallback dataCallback) {
+        // 如果BluetoothCallback也实现了DataCallback，则同时设置
+        if (callback instanceof DataCallback) {
+            // 已经在setCallback中设置了
+        } else {
+            // 需要单独处理DataCallback
+            this.dataCallback = dataCallback;
+        }
     }
     
     /**
@@ -281,6 +301,15 @@ public class BluetoothManager {
             commandString = "SAVE_MATCH:" + saveMatch.getMatchName() + "|" + saveMatch.getTotalHomeScore() + "|" + saveMatch.getTotalAwayScore();
         } else if (command instanceof ScoreCommand.SyncAllScores) {
             commandString = "SYNC_ALL_SCORES";
+        } else if (command instanceof ScoreCommand.SelectMatch) {
+            ScoreCommand.SelectMatch selectMatch = (ScoreCommand.SelectMatch) command;
+            commandString = "SELECT_MATCH:" + selectMatch.getMatchId();
+        } else if (command instanceof ScoreCommand.SelectPreviousQuarter) {
+            ScoreCommand.SelectPreviousQuarter selectPreviousQuarter = (ScoreCommand.SelectPreviousQuarter) command;
+            commandString = "SELECT_PREVIOUS_QUARTER:" + selectPreviousQuarter.getMatchId() + "|" + selectPreviousQuarter.getQuarterNumber();
+        } else if (command instanceof ScoreCommand.UpdatePreviousQuarter) {
+            ScoreCommand.UpdatePreviousQuarter updatePreviousQuarter = (ScoreCommand.UpdatePreviousQuarter) command;
+            commandString = "UPDATE_PREVIOUS_QUARTER:" + updatePreviousQuarter.getMatchId() + "|" + updatePreviousQuarter.getQuarterNumber() + "|" + updatePreviousQuarter.getHomeScore() + "|" + updatePreviousQuarter.getAwayScore();
         }
         
         Log.d(TAG, "准备发送命令: " + commandString);
@@ -502,7 +531,7 @@ public class BluetoothManager {
     }
     
     /**
-     * 处理PC响应
+     * 处理PC端响应
      */
     private void handlePCResponse(String response) {
         if (response.startsWith("MATCH_CREATED:")) {
@@ -514,6 +543,67 @@ public class BluetoothManager {
             Log.d(TAG, "比赛保存成功");
         } else if (response.equals("ACK")) {
             Log.d(TAG, "PC确认收到数据");
+        } else if (response.startsWith("PREVIOUS_QUARTER:")) {
+            // 处理PC端返回的上一节比分数据
+            handlePreviousQuarterResponse(response);
+        } else if (response.startsWith("TOTAL_SCORE_UPDATED:")) {
+            // 处理PC端返回的总分更新数据
+            handleTotalScoreUpdateResponse(response);
+        } else if (response.startsWith("PREVIOUS_QUARTER_UPDATED")) {
+            Log.d(TAG, "上一节比分修改成功");
+        } else if (response.startsWith("QUARTER_NOT_FOUND")) {
+            Log.d(TAG, "未找到指定节次的比分");
+        } else if (response.startsWith("PREVIOUS_QUARTER_UPDATE_FAILED")) {
+            Log.d(TAG, "上一节比分修改失败");
+        }
+    }
+    
+    /**
+     * 处理上一节比分响应
+     */
+    private void handlePreviousQuarterResponse(String response) {
+        try {
+            String data = response.substring("PREVIOUS_QUARTER:".length());
+            String[] parts = data.split("\\|");
+            
+            if (parts.length >= 3) {
+                int quarterNumber = Integer.parseInt(parts[0]);
+                int homeScore = Integer.parseInt(parts[1]);
+                int awayScore = Integer.parseInt(parts[2]);
+                
+                Log.d(TAG, "收到第" + quarterNumber + "节比分: " + homeScore + ":" + awayScore);
+                
+                // 通知MainActivity处理数据
+                if (dataCallback != null) { // 使用dataCallback
+                    dataCallback.onPreviousQuarterData(quarterNumber, homeScore, awayScore);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "解析上一节比分响应失败", e);
+        }
+    }
+    
+    /**
+     * 处理总分更新响应
+     */
+    private void handleTotalScoreUpdateResponse(String response) {
+        try {
+            String data = response.substring("TOTAL_SCORE_UPDATED:".length());
+            String[] parts = data.split("\\|");
+            
+            if (parts.length >= 2) {
+                int totalHomeScore = Integer.parseInt(parts[0]);
+                int totalAwayScore = Integer.parseInt(parts[1]);
+                
+                Log.d(TAG, "收到总分更新: " + totalHomeScore + ":" + totalAwayScore);
+                
+                // 通知MainActivity处理数据
+                if (dataCallback != null) { // 使用dataCallback
+                    dataCallback.onTotalScoreUpdate(totalHomeScore, totalAwayScore);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "解析总分更新响应失败", e);
         }
     }
     
@@ -746,6 +836,66 @@ public class BluetoothManager {
         
         public static class SyncAllScores extends ScoreCommand {
             // 同步所有比分命令，不需要额外参数
+        }
+
+        public static class SelectMatch extends ScoreCommand {
+            private final int matchId;
+            
+            public SelectMatch(int matchId) {
+                this.matchId = matchId;
+            }
+            
+            public int getMatchId() {
+                return matchId;
+            }
+        }
+        
+        public static class SelectPreviousQuarter extends ScoreCommand {
+            private final int matchId;
+            private final int quarterNumber;
+            
+            public SelectPreviousQuarter(int matchId, int quarterNumber) {
+                this.matchId = matchId;
+                this.quarterNumber = quarterNumber;
+            }
+            
+            public int getMatchId() {
+                return matchId;
+            }
+            
+            public int getQuarterNumber() {
+                return quarterNumber;
+            }
+        }
+        
+        public static class UpdatePreviousQuarter extends ScoreCommand {
+            private final int matchId;
+            private final int quarterNumber;
+            private final int homeScore;
+            private final int awayScore;
+            
+            public UpdatePreviousQuarter(int matchId, int quarterNumber, int homeScore, int awayScore) {
+                this.matchId = matchId;
+                this.quarterNumber = quarterNumber;
+                this.homeScore = homeScore;
+                this.awayScore = awayScore;
+            }
+            
+            public int getMatchId() {
+                return matchId;
+            }
+            
+            public int getQuarterNumber() {
+                return quarterNumber;
+            }
+            
+            public int getHomeScore() {
+                return homeScore;
+            }
+            
+            public int getAwayScore() {
+                return awayScore;
+            }
         }
     }
 } 

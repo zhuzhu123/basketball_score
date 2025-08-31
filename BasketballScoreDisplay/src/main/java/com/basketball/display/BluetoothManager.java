@@ -301,6 +301,97 @@ public class BluetoothManager {
     }
     
     /**
+     * 处理选择比赛命令
+     */
+    private void handleSelectMatch(String value) throws Exception {
+        int matchId = Integer.parseInt(value);
+        currentMatchId = matchId;
+        System.out.println("选择比赛: ID = " + matchId);
+        
+        // 获取比赛信息
+        DatabaseManager.MatchInfo matchInfo = databaseManager.getMatchById(matchId);
+        if (matchInfo != null) {
+            // 获取所有节次比分
+            List<DatabaseManager.QuarterScore> quarterScores = databaseManager.getQuarterScores(matchId);
+            
+            // 发送比赛信息到手机端
+            String matchData = "MATCH_SELECTED:" + matchId + "|" + 
+                             matchInfo.getMatchName() + "|" + 
+                             matchInfo.getMatchNote() + "|" + 
+                             matchInfo.getTotalHomeScore() + "|" + 
+                             matchInfo.getTotalAwayScore();
+            sendDataToMobile(matchData);
+            
+            // 发送节次比分信息
+            for (DatabaseManager.QuarterScore quarterScore : quarterScores) {
+                String quarterData = "QUARTER_SCORE:" + quarterScore.getQuarterNumber() + "|" + 
+                                   quarterScore.getHomeScore() + "|" + 
+                                   quarterScore.getAwayScore();
+                sendDataToMobile(quarterData);
+            }
+            
+            sendResponse("MATCH_SELECTED");
+        } else {
+            sendResponse("MATCH_NOT_FOUND");
+        }
+    }
+    
+    /**
+     * 处理获取上一节比分命令
+     */
+    private void handleGetPreviousQuarter(String value) throws Exception {
+        String[] parts = value.split("\\|");
+        if (parts.length >= 2) {
+            int matchId = Integer.parseInt(parts[0]);
+            int quarterNumber = Integer.parseInt(parts[1]);
+            
+            System.out.println("获取第" + quarterNumber + "节比分，比赛ID: " + matchId);
+            
+            DatabaseManager.QuarterScore quarterScore = databaseManager.getQuarterScore(matchId, quarterNumber);
+            if (quarterScore != null) {
+                String quarterData = "PREVIOUS_QUARTER:" + quarterNumber + "|" + 
+                                   quarterScore.getHomeScore() + "|" + 
+                                   quarterScore.getAwayScore();
+                sendDataToMobile(quarterData);
+                sendResponse("PREVIOUS_QUARTER_SENT");
+            } else {
+                sendResponse("QUARTER_NOT_FOUND");
+            }
+        }
+    }
+    
+    /**
+     * 处理修改上一节比分命令
+     */
+    private void handleUpdatePreviousQuarter(String value) throws Exception {
+        String[] parts = value.split("\\|");
+        if (parts.length >= 4) {
+            int matchId = Integer.parseInt(parts[0]);
+            int quarterNumber = Integer.parseInt(parts[1]);
+            int homeScore = Integer.parseInt(parts[2]);
+            int awayScore = Integer.parseInt(parts[3]);
+            
+            System.out.println("修改第" + quarterNumber + "节比分: " + homeScore + "-" + awayScore + 
+                             "，比赛ID: " + matchId);
+            
+            boolean success = databaseManager.updateQuarterScore(matchId, quarterNumber, homeScore, awayScore);
+            if (success) {
+                // 获取更新后的比赛总分
+                DatabaseManager.MatchInfo matchInfo = databaseManager.getMatchById(matchId);
+                if (matchInfo != null) {
+                    String totalData = "TOTAL_SCORE_UPDATED:" + matchInfo.getTotalHomeScore() + "|" + 
+                                     matchInfo.getTotalAwayScore();
+                    sendDataToMobile(totalData);
+                }
+                
+                sendResponse("PREVIOUS_QUARTER_UPDATED");
+            } else {
+                sendResponse("PREVIOUS_QUARTER_UPDATE_FAILED");
+            }
+        }
+    }
+    
+    /**
      * 获取当前比赛ID
      */
     private int getCurrentMatchId() {

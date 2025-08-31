@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import android.widget.EditText;
 
-public class MainActivity extends AppCompatActivity implements BluetoothManager.BluetoothCallback {
+public class MainActivity extends AppCompatActivity implements BluetoothManager.BluetoothCallback, BluetoothManager.DataCallback {
     
     // UI组件
     private TextView tvBluetoothStatus;
@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     private TextView tvQuarter;
     private Button btnHomePlus1, btnHomePlus2, btnHomePlus3, btnHomeMinus1;
     private Button btnAwayPlus1, btnAwayPlus2, btnAwayPlus3, btnAwayMinus1;
-    private Button btnResetScore, btnTimeout, btnStartTimer, btnPauseTimer, btnContinueTimer, btnNextQuarter;
+    private Button btnResetScore, btnTimeout, btnStartTimer, btnPauseTimer, btnContinueTimer, btnNextQuarter, btnPreviousQuarter;
     
     // 比赛管理UI组件
     private View layoutMatchInfo;
@@ -64,6 +64,23 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     // 倒计时状态管理
     private boolean isTimerRunning = false;
     private boolean isTimerPaused = false;
+    
+    // 当前比赛ID
+    private int currentMatchId = -1;
+    
+    // 节次比分历史记录
+    private java.util.Map<Integer, QuarterScore> quarterHistory = new java.util.HashMap<>();
+    
+    // 节次比分数据类
+    private static class QuarterScore {
+        int homeScore;
+        int awayScore;
+        
+        QuarterScore(int homeScore, int awayScore) {
+            this.homeScore = homeScore;
+            this.awayScore = awayScore;
+        }
+    }
     
     // 权限请求
     private final ActivityResultLauncher<String[]> bluetoothPermissionLauncher = 
@@ -128,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         btnPauseTimer = findViewById(R.id.btnPauseTimer);
         btnContinueTimer = findViewById(R.id.btnContinueTimer);
         btnNextQuarter = findViewById(R.id.btnNextQuarter);
+        btnPreviousQuarter = findViewById(R.id.btnPreviousQuarter);
         
         // 比赛管理UI组件
         layoutMatchInfo = findViewById(R.id.layoutMatchInfo);
@@ -149,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
     private void setupBluetoothManager() {
         bluetoothManager = new BluetoothManager(this);
         bluetoothManager.setCallback(this);
+        bluetoothManager.setDataCallback(this);
     }
     
     private void setupUI() {
@@ -183,6 +202,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         btnContinueTimer.setEnabled(false);
         
         btnNextQuarter.setOnClickListener(v -> nextQuarter());
+        btnPreviousQuarter.setOnClickListener(v -> previousQuarter());
         
         // 比赛管理按钮
         btnNewMatch.setOnClickListener(v -> showNewMatchDialog());
@@ -192,6 +212,31 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         // 上一节比分管理按钮
         btnViewPreviousQuarter.setOnClickListener(v -> viewPreviousQuarter());
         btnEditPreviousQuarter.setOnClickListener(v -> editPreviousQuarter());
+        
+        // 添加查看历史记录按钮
+        Button btnViewHistory = new Button(this);
+        btnViewHistory.setText("查看历史");
+        btnViewHistory.setOnClickListener(v -> showQuarterHistory());
+        
+        // 使用兼容的方式设置背景颜色
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            btnViewHistory.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getResources().getColor(android.R.color.holo_purple)));
+        } else {
+            btnViewHistory.setBackgroundColor(getResources().getColor(android.R.color.holo_purple));
+        }
+        
+        btnViewHistory.setTextColor(getResources().getColor(android.R.color.white));
+        btnViewHistory.setPadding(20, 10, 20, 10);
+        btnViewHistory.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        
+        // 将按钮添加到比赛管理区域
+        android.widget.LinearLayout matchButtonLayout = findViewById(R.id.layoutMatchInfo);
+        if (matchButtonLayout != null) {
+            matchButtonLayout.addView(btnViewHistory);
+        }
         
         // 添加连接PC按钮功能
         Button btnConnectPC = new Button(this);
@@ -419,26 +464,52 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
             return;
         }
         
-        // 保存当前节次比分到上一节
-        previousQuarterHomeScore = homeScore;
-        previousQuarterAwayScore = awayScore;
+        // 保存当前节次比分到历史记录
+        quarterHistory.put(currentQuarter, new QuarterScore(homeScore, awayScore));
         
-        // 更新总分
+        // 更新累计总分（使用正确的逻辑）
         lastTotalHomeScore += homeScore;
         lastTotalAwayScore += awayScore;
+
+        // 更新显示总分
+        totalHomeScore = lastTotalHomeScore;
+        totalAwayScore = lastTotalAwayScore;
         
         // 保存当前节次比分
         saveCurrentQuarter();
         
         // 进入下一节
         currentQuarter++;
-        homeScore = 0;
-        awayScore = 0;
         
-        // 更新显示
-        updateMatchInfo();
-        updateScoreDisplay();
-        updateQuarterDisplay();
+        // 从历史记录中获取下一节的比分
+        QuarterScore nextScore = quarterHistory.get(currentQuarter);
+        if (nextScore != null) {
+            // 使用历史记录中的比分
+            homeScore = nextScore.homeScore;
+            awayScore = nextScore.awayScore;
+
+            // 从总分中减去当前节次比分
+            lastTotalHomeScore -= homeScore;
+            lastTotalAwayScore -= awayScore;
+
+            // 更新显示
+            updateMatchInfo();
+            updateScoreDisplay();
+            updateQuarterDisplay();
+            
+            showToast("进入第" + currentQuarter + "节，比分：" + homeScore + ":" + awayScore);
+        } else {
+            // 如果历史记录中没有，重置为0（新节次）
+            homeScore = 0;
+            awayScore = 0;
+            
+            // 更新显示
+            updateMatchInfo();
+            updateScoreDisplay();
+            updateQuarterDisplay();
+            
+            showToast("进入第" + currentQuarter + "节（新节次）");
+        }
         
         // 显示上一节比分管理按钮（从第2节开始）
         if (currentQuarter > 1) {
@@ -451,10 +522,146 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
             bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Quarter(currentQuarter));
         }
         
-        showToast("进入第" + currentQuarter + "节");
+        // 检查是否达到100分结束条件
+        checkGameEnd();
+    }
+    
+    /**
+     * 进入下一节但不累加当前节次比分（用于从checkQuarterEnd调用）
+     */
+    private void nextQuarterWithoutAddingScore() {
+        if (!isMatchStarted) {
+            showToast("请先新建比赛");
+            return;
+        }
+        
+        if (currentQuarter >= 10) { // 最多10节
+            showToast("已达到最大节次");
+            return;
+        }
+        
+        // 保存当前节次比分到历史记录
+        quarterHistory.put(currentQuarter, new QuarterScore(homeScore, awayScore));
+        
+        // 注意：不累加总分，因为已经在checkQuarterEnd中累加过了
+
+        // 更新累计总分（使用正确的逻辑）
+        lastTotalHomeScore += homeScore;
+        lastTotalAwayScore += awayScore;
+
+        // 更新显示总分
+        totalHomeScore = lastTotalHomeScore;
+        totalAwayScore = lastTotalAwayScore;
+
+        // 保存当前节次比分
+        saveCurrentQuarter();
+        
+        // 进入下一节
+        currentQuarter++;
+        
+        // 从历史记录中获取下一节的比分
+        QuarterScore nextScore = quarterHistory.get(currentQuarter);
+        if (nextScore != null) {
+            // 使用历史记录中的比分
+            homeScore = nextScore.homeScore;
+            awayScore = nextScore.awayScore;
+            
+            // 更新显示
+            updateMatchInfo();
+            updateScoreDisplay();
+            updateQuarterDisplay();
+            
+            showToast("进入第" + currentQuarter + "节，比分：" + homeScore + ":" + awayScore);
+        } else {
+            // 如果历史记录中没有，重置为0（新节次）
+            homeScore = 0;
+            awayScore = 0;
+            
+            // 更新显示
+            updateMatchInfo();
+            updateScoreDisplay();
+            updateQuarterDisplay();
+            
+            showToast("进入第" + currentQuarter + "节（新节次）");
+        }
+        
+        // 显示上一节比分管理按钮（从第2节开始）
+        if (currentQuarter > 1) {
+            btnViewPreviousQuarter.setVisibility(View.VISIBLE);
+            btnEditPreviousQuarter.setVisibility(View.VISIBLE);
+        }
+        
+        // 发送节次更新命令
+        if (bluetoothManager != null) {
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Quarter(currentQuarter));
+        }
         
         // 检查是否达到100分结束条件
         checkGameEnd();
+    }
+    
+    private void previousQuarter() {
+        if (!isMatchStarted) {
+            showToast("请先新建比赛");
+            return;
+        }
+        
+        if (currentQuarter <= 1) {
+            showToast("已经是第1节，无法返回上一节");
+            return;
+        }
+        
+        // 保存当前节次比分到历史记录
+        quarterHistory.put(currentQuarter, new QuarterScore(homeScore, awayScore));
+        
+
+        // 返回上一节
+        currentQuarter--;
+        
+        // 从历史记录中获取上一节的比分
+        QuarterScore previousScore = quarterHistory.get(currentQuarter);
+        if (previousScore != null) {
+            // 使用历史记录中的比分
+            homeScore = previousScore.homeScore;
+            awayScore = previousScore.awayScore;
+            // 从总分中减去当前节次比分
+            lastTotalHomeScore = totalHomeScore - homeScore;
+            lastTotalAwayScore = totalAwayScore - awayScore;
+            // 更新显示
+            updateMatchInfo();
+            updateScoreDisplay();
+            updateQuarterDisplay();
+            
+            showToast("返回第" + currentQuarter + "节，比分：" + homeScore + ":" + awayScore);
+        } else {
+            // 如果历史记录中没有，尝试从PC端获取
+            if (bluetoothManager != null) {
+                bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.SelectPreviousQuarter(currentMatchId, currentQuarter));
+                showToast("正在从PC获取第" + currentQuarter + "节比分...");
+            } else {
+                // 如果没有连接PC且没有历史记录，重置为0
+                homeScore = 0;
+                awayScore = 0;
+                
+                // 更新显示
+                updateMatchInfo();
+                updateScoreDisplay();
+                updateQuarterDisplay();
+                
+                showToast("返回第" + currentQuarter + "节（无历史记录）");
+            }
+        }
+        
+        // 隐藏上一节比分管理按钮（如果是第1节）
+        if (currentQuarter <= 1) {
+            btnViewPreviousQuarter.setVisibility(View.GONE);
+            btnEditPreviousQuarter.setVisibility(View.GONE);
+        }
+        
+        // 发送节次更新命令到PC
+        if (bluetoothManager != null) {
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Quarter(currentQuarter));
+        }
     }
     
     private void updateScoreDisplay() {
@@ -659,7 +866,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         awayScore = 0;
         totalHomeScore = 0;
         totalAwayScore = 0;
+        lastTotalHomeScore = 0;
+        lastTotalAwayScore = 0;
         isMatchStarted = true;
+        
+        // 清空节次历史记录
+        quarterHistory.clear();
         
         // 更新UI
         updateMatchInfo();
@@ -806,10 +1018,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
             // 达到20分，自动结束本节
             showToast("第" + currentQuarter + "节结束！");
             
-            // 更新总分
-            totalHomeScore += homeScore;
-            totalAwayScore += awayScore;
-            
+
             // 自动保存本节
             saveCurrentQuarter();
             
@@ -817,7 +1026,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
             new AlertDialog.Builder(this)
                 .setTitle("本节结束")
                 .setMessage("是否进入下一节？")
-                .setPositiveButton("是", (dialog, which) -> nextQuarter())
+                .setPositiveButton("是", (dialog, which) -> nextQuarterWithoutAddingScore())
                 .setNegativeButton("否", null)
                 .show();
         }
@@ -889,6 +1098,175 @@ public class MainActivity extends AppCompatActivity implements BluetoothManager.
         } else {
             showToast("蓝牙管理器未初始化，无法同步比分");
         }
+    }
+    
+    /**
+     * 选择上一节并带出比分
+     */
+    private void selectPreviousQuarter(int quarterNumber) {
+        if (!isMatchStarted) {
+            showToast("请先新建比赛");
+            return;
+        }
+        
+        if (quarterNumber < 1 || quarterNumber >= currentQuarter) {
+            showToast("无效的节次");
+            return;
+        }
+        
+        // 发送选择上一节命令到PC
+        if (bluetoothManager != null) {
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.SelectPreviousQuarter(currentMatchId, quarterNumber));
+            showToast("正在获取第" + quarterNumber + "节比分...");
+        } else {
+            showToast("蓝牙管理器未初始化");
+        }
+    }
+    
+    /**
+     * 处理PC端返回的上一节比分数据
+     */
+    private void handlePreviousQuarterData(int quarterNumber, int homeScore, int awayScore) {
+        // 将上一节比分显示到当前小节
+        this.homeScore = homeScore;
+        this.awayScore = awayScore;
+        
+        // 更新历史记录
+        quarterHistory.put(quarterNumber, new QuarterScore(homeScore, awayScore));
+        
+        // 更新比分显示
+        updateScoreDisplay();
+        
+        // 更新节次显示
+        currentQuarter = quarterNumber;
+        updateQuarterDisplay();
+        
+        // 更新比赛信息显示
+        updateMatchInfo();
+        
+        // 显示成功提示
+        showToast("已加载第" + quarterNumber + "节比分：" + homeScore + ":" + awayScore);
+        
+        // 发送同步命令到PC，让PC端也显示到当前小节
+        if (bluetoothManager != null) {
+            // 发送节次同步命令
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.Quarter(quarterNumber));
+            // 发送比分同步命令
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.HomeScore(homeScore));
+            bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.AwayScore(awayScore));
+        }
+    }
+    
+    // DataCallback 实现方法
+    @Override
+    public void onPreviousQuarterData(int quarterNumber, int homeScore, int awayScore) {
+        handlePreviousQuarterData(quarterNumber, homeScore, awayScore);
+    }
+    
+    @Override
+    public void onTotalScoreUpdate(int totalHomeScore, int totalAwayScore) {
+        handleTotalScoreUpdate(totalHomeScore, totalAwayScore);
+    }
+    
+    /**
+     * 处理PC端返回的总分更新数据
+     */
+    private void handleTotalScoreUpdate(int totalHomeScore, int totalAwayScore) {
+        // 更新总分
+        this.totalHomeScore = totalHomeScore;
+        this.totalAwayScore = totalAwayScore;
+        
+        // 更新比赛信息显示
+        updateMatchInfo();
+        
+        // 显示总分更新提示
+        showToast("总分已更新：" + totalHomeScore + ":" + totalAwayScore);
+    }
+    
+    /**
+     * 显示节次历史记录
+     */
+    private void showQuarterHistory() {
+        if (!isMatchStarted) {
+            showToast("请先新建比赛");
+            return;
+        }
+        
+        if (quarterHistory.isEmpty()) {
+            showToast("暂无历史记录");
+            return;
+        }
+        
+        // 构建历史记录信息
+        StringBuilder historyText = new StringBuilder();
+        historyText.append("节次历史记录：\n\n");
+        
+        // 按节次顺序显示
+        for (int i = 1; i <= currentQuarter; i++) {
+            QuarterScore score = quarterHistory.get(i);
+            if (score != null) {
+                historyText.append("第").append(i).append("节：")
+                          .append(score.homeScore).append(" : ").append(score.awayScore).append("\n");
+            }
+        }
+        
+        // 显示当前节次
+        historyText.append("\n当前第").append(currentQuarter).append("节：")
+                  .append(homeScore).append(" : ").append(awayScore);
+        
+        new AlertDialog.Builder(this)
+            .setTitle("节次历史记录")
+            .setMessage(historyText.toString())
+            .setPositiveButton("确定", null)
+            .show();
+    }
+    
+    /**
+     * 修改上一节比分
+     */
+    private void modifyPreviousQuarter(int quarterNumber) {
+        if (!isMatchStarted) {
+            showToast("请先新建比赛");
+            return;
+        }
+        
+        if (quarterNumber < 1 || quarterNumber >= currentQuarter) {
+            showToast("无效的节次");
+            return;
+        }
+        
+        // 创建修改比分的对话框
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_edit_quarter, null);
+        EditText etHomeScore = dialogView.findViewById(R.id.etHomeScore);
+        EditText etAwayScore = dialogView.findViewById(R.id.etAwayScore);
+        
+        // 设置当前值（可以从缓存或数据库获取）
+        etHomeScore.setText("0");
+        etAwayScore.setText("0");
+        
+        new AlertDialog.Builder(this)
+            .setTitle("修改第" + quarterNumber + "节比分")
+            .setView(dialogView)
+            .setPositiveButton("保存", (dialog, which) -> {
+                try {
+                    int newHomeScore = Integer.parseInt(etHomeScore.getText().toString());
+                    int newAwayScore = Integer.parseInt(etAwayScore.getText().toString());
+                    
+                    // 发送修改上一节比分命令到PC
+                    if (bluetoothManager != null) {
+                        bluetoothManager.sendScoreCommand(new BluetoothManager.ScoreCommand.UpdatePreviousQuarter(
+                            currentMatchId, quarterNumber, newHomeScore, newAwayScore));
+                        showToast("正在修改第" + quarterNumber + "节比分...");
+                    } else {
+                        showToast("蓝牙管理器未初始化");
+                    }
+                    
+                } catch (NumberFormatException e) {
+                    showToast("请输入有效的分数");
+                }
+            })
+            .setNegativeButton("取消", null)
+            .show();
     }
     
     @Override

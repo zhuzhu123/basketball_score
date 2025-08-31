@@ -201,8 +201,8 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         panel.add(currentScorePanel, BorderLayout.CENTER);
         
         // 控制按钮面板（底部）
-        JPanel controlPanel = createControlPanel();
-        panel.add(controlPanel, BorderLayout.SOUTH);
+//        JPanel controlPanel = createControlPanel();
+//        panel.add(controlPanel, BorderLayout.SOUTH);
         
         return panel;
     }
@@ -820,7 +820,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         System.out.println("解析命令: " + cmdName + " = " + value);
         
         try {
-                                    switch (cmdName) {
+                    switch (cmdName) {
                             case "NEW_MATCH":
                                 handleNewMatch(value);
                                 break;
@@ -877,6 +877,12 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                             case "SYNC_ALL_SCORES":
                                 handleSyncAllScores(); // 不需要参数
                                 break;
+                            case "SELECT_PREVIOUS_QUARTER":
+                                handleSelectPreviousQuarter(value);
+                                break;
+                            case "UPDATE_PREVIOUS_QUARTER":
+                                handleUpdatePreviousQuarter(value);
+                                break;
                             default:
                                 System.out.println("未知命令: " + cmdName);
                         }
@@ -895,33 +901,65 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             int newQuarter = Integer.parseInt(value);
             if (newQuarter >= 1 && newQuarter <= 7) {
                 // 保存当前节次的比分到数据库
-                if (currentMatchId > 0 && (homeScore > 0 || awayScore > 0)) {
+                if (databaseManager != null && currentMatchId > 0) {
                     try {
-                        databaseManager.saveQuarterScore(currentMatchId, currentQuarter, homeScore, awayScore);
-                        System.out.println("保存第" + currentQuarter + "节比分: " + homeScore + "-" + awayScore);
-                        
-                        // 更新数据库中的总比分
-                        databaseManager.updateMatchTotalScore(currentMatchId, homeScore, awayScore);
-                        System.out.println("更新比赛总比分: " + homeScore + "-" + awayScore);
-                        
+                        boolean success = databaseManager.saveQuarterScore(currentMatchId, currentQuarter, homeScore, awayScore);
+                        if (success) {
+                            System.out.println("第" + currentQuarter + "节比分保存成功: " + homeScore + ":" + awayScore);
+                            
+                            // 更新节次比分显示
+                            updateQuarterScoresDisplay();
+                            
+                            // 播报保存成功信息
+                            WindowsTTS.speakAsync("第" + currentQuarter + "节比分已保存");
+                        } else {
+                            System.err.println("第" + currentQuarter + "节比分保存失败");
+                            WindowsTTS.speakAsync("第" + currentQuarter + "节比分保存失败");
+                        }
                     } catch (Exception e) {
-                        System.err.println("保存节次比分失败: " + e.getMessage());
+                        System.err.println("保存节次比分时出错: " + e.getMessage());
+                        e.printStackTrace();
                     }
+                } else {
+                    System.err.println("无法保存节次比分：数据库管理器未初始化或当前比赛ID无效");
                 }
                 
                 // 更新当前节次
                 currentQuarter = newQuarter;
                 
-                // 重置当前比分（中间区域显示当前节次比分）
-                homeScore = 0;
-                awayScore = 0;
+                // 从数据库获取该节次的历史比分
+                if (databaseManager != null && currentMatchId > 0) {
+                    try {
+                        DatabaseManager.QuarterScore quarterScore = databaseManager.getQuarterScore(currentMatchId, currentQuarter);
+                        if (quarterScore != null) {
+                            // 恢复历史比分
+                            homeScore = quarterScore.getHomeScore();
+                            awayScore = quarterScore.getAwayScore();
+                            System.out.println("恢复第" + currentQuarter + "节历史比分: " + homeScore + ":" + awayScore);
+                        } else {
+                            // 如果没有历史记录，重置为0
+                            homeScore = 0;
+                            awayScore = 0;
+                            System.out.println("第" + currentQuarter + "节无历史记录，重置为0:0");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("获取历史比分时出错: " + e.getMessage());
+                        // 出错时重置为0
+                        homeScore = 0;
+                        awayScore = 0;
+                    }
+                } else {
+                    // 数据库不可用时重置为0
+                    homeScore = 0;
+                    awayScore = 0;
+                }
                 
                 // 更新UI显示 - 中间区域显示当前节次比分
                 if (homeScoreLabel != null) {
-                    homeScoreLabel.setText("0");
+                    homeScoreLabel.setText(String.valueOf(homeScore));
                 }
                 if (awayScoreLabel != null) {
-                    awayScoreLabel.setText("0");
+                    awayScoreLabel.setText(String.valueOf(awayScore));
                 }
                 
                 // 更新当前节次标签显示
@@ -1113,7 +1151,33 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                     int totalHomeScore = Integer.parseInt(parts[1]);
                     int totalAwayScore = Integer.parseInt(parts[2]);
                     updateTotalScoreDisplay(totalHomeScore, totalAwayScore);
-                    databaseManager.updateMatchTotalScore(currentMatchId, totalHomeScore, totalAwayScore);
+                    // 保存比赛总分到数据库
+                    if (databaseManager != null && currentMatchId > 0) {
+                        try {
+                            // 计算总比分
+                            int calculatedTotalHomeScore = 0;
+                            int calculatedTotalAwayScore = 0;
+                            
+                            // 从数据库获取所有节次比分并计算总和
+                            List<DatabaseManager.QuarterScore> quarterScores = databaseManager.getQuarterScores(currentMatchId);
+                            for (DatabaseManager.QuarterScore quarterScore : quarterScores) {
+                                calculatedTotalHomeScore += quarterScore.getHomeScore();
+                                calculatedTotalAwayScore += quarterScore.getAwayScore();
+                            }
+                            
+                            // 更新比赛信息显示
+                            updateMatchInfoDisplay();
+                            
+                            System.out.println("比赛总分计算完成: " + calculatedTotalHomeScore + ":" + calculatedTotalAwayScore);
+                            WindowsTTS.speakAsync("比赛总分计算完成，龙都F4：" + calculatedTotalHomeScore + "分，暴风队：" + calculatedTotalAwayScore + "分");
+                            
+                        } catch (Exception e) {
+                            System.err.println("计算比赛总分时出错: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    } else {
+                        System.err.println("无法计算比赛总分：数据库管理器未初始化或当前比赛ID无效");
+                    }
                     System.out.println("处理保存比赛命令: " + totalHomeScore + "-" + totalAwayScore);
                 }
             } catch (Exception e) {
@@ -1210,6 +1274,115 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             }
         } else {
             System.out.println("蓝牙未连接，无法向手机端发送同步数据");
+        }
+    }
+    
+    /**
+     * 处理选择上一节命令
+     */
+    private void handleSelectPreviousQuarter(String value) {
+        try {
+            String[] parts = value.split("\\|");
+            if (parts.length >= 2) {
+                int matchId = Integer.parseInt(parts[0]);
+                int quarterNumber = Integer.parseInt(parts[1]);
+                
+                System.out.println("收到选择上一节命令，比赛ID: " + matchId + "，节次: " + quarterNumber);
+                
+                // 从数据库获取该节次比分
+                if (databaseManager != null) {
+                    DatabaseManager.QuarterScore quarterScore = databaseManager.getQuarterScore(matchId, quarterNumber);
+                    if (quarterScore != null) {
+                        // 更新当前节次变量
+                        currentQuarter = quarterNumber;
+                        
+                        // 显示该节次比分
+                        homeScore = quarterScore.getHomeScore();
+                        awayScore = quarterScore.getAwayScore();
+                        
+                        // 更新比分显示
+                        if (homeScoreLabel != null) {
+                            homeScoreLabel.setText(String.valueOf(homeScore));
+                        }
+                        if (awayScoreLabel != null) {
+                            awayScoreLabel.setText(String.valueOf(awayScore));
+                        }
+                        if (currentQuarterLabel != null) {
+                            currentQuarterLabel.setText("第" + quarterNumber + "节");
+                        }
+                        
+                        // 更新节次比分显示
+                        updateQuarterScoresDisplay();
+                        
+                        // 播报选择上一节信息
+                        WindowsTTS.speakAsync("已选择第" + quarterNumber + "节，比分：" + homeScore + "比" + awayScore);
+                        
+                        System.out.println("已选择第" + quarterNumber + "节，比分：" + homeScore + ":" + awayScore);
+                    } else {
+                        System.err.println("未找到第" + quarterNumber + "节的比分记录");
+                        WindowsTTS.speakAsync("未找到第" + quarterNumber + "节的比分记录");
+                    }
+                }
+            }
+            
+        } catch (NumberFormatException e) {
+            System.err.println("节次信息格式错误: " + value);
+        } catch (Exception e) {
+            System.err.println("处理选择上一节命令失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 处理修改上一节比分命令
+     */
+    private void handleUpdatePreviousQuarter(String value) {
+        try {
+            String[] parts = value.split("\\|");
+            if (parts.length >= 4) {
+                int matchId = Integer.parseInt(parts[0]);
+                int quarterNumber = Integer.parseInt(parts[1]);
+                int newHomeScore = Integer.parseInt(parts[2]);
+                int newAwayScore = Integer.parseInt(parts[3]);
+                
+                System.out.println("收到修改上一节比分命令，比赛ID: " + matchId + "，节次: " + quarterNumber + 
+                                 "，新比分：" + newHomeScore + ":" + newAwayScore);
+                
+                // 更新数据库中的比分
+                if (databaseManager != null) {
+                    boolean success = databaseManager.updateQuarterScore(matchId, quarterNumber, newHomeScore, newAwayScore);
+                    if (success) {
+                        // 更新当前显示
+                        homeScore = newHomeScore;
+                        awayScore = newAwayScore;
+                        
+                        // 更新比分显示
+                        if (homeScoreLabel != null) {
+                            homeScoreLabel.setText(String.valueOf(homeScore));
+                        }
+                        if (awayScoreLabel != null) {
+                            awayScoreLabel.setText(String.valueOf(awayScore));
+                        }
+                        
+                        // 更新节次比分显示
+                        updateQuarterScoresDisplay();
+                        
+                        // 播报修改成功信息
+                        WindowsTTS.speakAsync("第" + quarterNumber + "节比分已修改为：" + newHomeScore + "比" + newAwayScore);
+                        
+                        System.out.println("第" + quarterNumber + "节比分修改成功：" + newHomeScore + ":" + newAwayScore);
+                    } else {
+                        System.err.println("第" + quarterNumber + "节比分修改失败");
+                        WindowsTTS.speakAsync("第" + quarterNumber + "节比分修改失败");
+                    }
+                }
+            }
+            
+        } catch (NumberFormatException e) {
+            System.err.println("比分信息格式错误: " + value);
+        } catch (Exception e) {
+            System.err.println("处理修改上一节比分命令失败: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     

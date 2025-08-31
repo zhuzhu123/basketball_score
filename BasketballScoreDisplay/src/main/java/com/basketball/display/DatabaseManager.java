@@ -160,24 +160,96 @@ public class DatabaseManager {
     }
     
     /**
-     * 更新比赛总分
+     * 获取指定节次的比分
      */
-    public boolean updateMatchTotalScore(int matchId, int totalHomeScore, int totalAwayScore) throws SQLException {
-        String sql = "UPDATE matches SET total_home_score = ?, total_away_score = ? WHERE id = ?";
+    public QuarterScore getQuarterScore(int matchId, int quarterNumber) throws SQLException {
+        String sql = "SELECT * FROM quarter_scores WHERE match_id = ? AND quarter_number = ?";
         
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, totalHomeScore);
-            pstmt.setInt(2, totalAwayScore);
-            pstmt.setInt(3, matchId);
+            pstmt.setInt(1, matchId);
+            pstmt.setInt(2, quarterNumber);
             
-            int affectedRows = pstmt.executeUpdate();
-            boolean success = affectedRows > 0;
-            
-            if (success) {
-                System.out.println("更新比赛总分成功");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new QuarterScore(
+                        rs.getInt("id"),
+                        rs.getInt("match_id"),
+                        rs.getInt("quarter_number"),
+                        rs.getInt("home_score"),
+                        rs.getInt("away_score"),
+                        rs.getTimestamp("created_at")
+                    );
+                }
             }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 根据ID获取比赛信息
+     */
+    public MatchInfo getMatchById(int matchId) throws SQLException {
+        String sql = "SELECT * FROM matches WHERE id = ?";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, matchId);
             
-            return success;
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new MatchInfo(
+                        rs.getInt("id"),
+                        rs.getString("match_name"),
+                        rs.getString("match_note"),
+                        rs.getInt("total_home_score"),
+                        rs.getInt("total_away_score"),
+                        rs.getTimestamp("created_at")
+                    );
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 更新指定节次的比分
+     */
+    public boolean updateQuarterScore(int matchId, int quarterNumber, int homeScore, int awayScore) throws SQLException {
+        String sql = "UPDATE quarter_scores SET home_score = ?, away_score = ?, updated_at = CURRENT_TIMESTAMP " +
+                    "WHERE match_id = ? AND quarter_number = ?";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, homeScore);
+            pstmt.setInt(2, awayScore);
+            pstmt.setInt(3, matchId);
+            pstmt.setInt(4, quarterNumber);
+            
+            int rowsAffected = pstmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                // 更新比赛总分
+                updateMatchTotalScore(matchId);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 更新比赛总分
+     */
+    private void updateMatchTotalScore(int matchId) throws SQLException {
+        String sql = "UPDATE matches SET total_home_score = (SELECT SUM(home_score) FROM quarter_scores WHERE match_id = ?), " +
+                    "total_away_score = (SELECT SUM(away_score) FROM quarter_scores WHERE match_id = ?), " +
+                    "updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, matchId);
+            pstmt.setInt(2, matchId);
+            pstmt.setInt(3, matchId);
+            pstmt.executeUpdate();
         }
     }
     

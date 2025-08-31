@@ -516,6 +516,12 @@
                     android:minWidth="60dp"
                     android:gravity="center" />
 
+                <Button
+                    android:id="@+id/btnPreviousQuarter"
+                    style="@style/GameButtonStyle"
+                    android:text="上一节"
+                    android:backgroundTint="@color/basketball_blue" />
+
                 <View
                     android:layout_width="0dp"
                     android:layout_height="1dp"
