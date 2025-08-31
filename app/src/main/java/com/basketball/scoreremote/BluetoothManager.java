@@ -310,6 +310,10 @@ public class BluetoothManager {
         } else if (command instanceof ScoreCommand.UpdatePreviousQuarter) {
             ScoreCommand.UpdatePreviousQuarter updatePreviousQuarter = (ScoreCommand.UpdatePreviousQuarter) command;
             commandString = "UPDATE_PREVIOUS_QUARTER:" + updatePreviousQuarter.getMatchId() + "|" + updatePreviousQuarter.getQuarterNumber() + "|" + updatePreviousQuarter.getHomeScore() + "|" + updatePreviousQuarter.getAwayScore();
+        } else if (command instanceof ScoreCommand.SetHomeScore) {
+            commandString = "SET_HOME_SCORE:" + ((ScoreCommand.SetHomeScore) command).getScore();
+        } else if (command instanceof ScoreCommand.SetAwayScore) {
+            commandString = "SET_AWAY_SCORE:" + ((ScoreCommand.SetAwayScore) command).getScore();
         }
         
         Log.d(TAG, "准备发送命令: " + commandString);
@@ -726,6 +730,30 @@ public class BluetoothManager {
             
             public int getPoints() {
                 return points;
+            }
+        }
+        
+        public static class SetHomeScore extends ScoreCommand {
+            private final int score;
+            
+            public SetHomeScore(int score) {
+                this.score = score;
+            }
+            
+            public int getScore() {
+                return score;
+            }
+        }
+        
+        public static class SetAwayScore extends ScoreCommand {
+            private final int score;
+            
+            public SetAwayScore(int score) {
+                this.score = score;
+            }
+            
+            public int getScore() {
+                return score;
             }
         }
         

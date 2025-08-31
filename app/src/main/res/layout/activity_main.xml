@@ -129,7 +129,7 @@
 
                 </LinearLayout>
 
-                <!-- 上一节比分管理按钮 -->
+                <!-- 本节比分编辑按钮 -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -138,16 +138,9 @@
                     android:layout_marginTop="8dp">
 
                     <Button
-                        android:id="@+id/btnViewPreviousQuarter"
+                        android:id="@+id/btnEditCurrentQuarter"
                         style="@style/MatchButtonStyle"
-                        android:text="查看上节"
-                        android:backgroundTint="@color/basketball_blue"
-                        android:visibility="gone" />
-
-                    <Button
-                        android:id="@+id/btnEditPreviousQuarter"
-                        style="@style/MatchButtonStyle"
-                        android:text="编辑上节"
+                        android:text="编辑本节"
                         android:backgroundTint="@color/basketball_green"
                         android:visibility="gone" />
 

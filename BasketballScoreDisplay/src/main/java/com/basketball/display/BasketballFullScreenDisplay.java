@@ -1,5 +1,7 @@
 package com.basketball.display;
 
+import com.basketball.display.announcer.NBACountdown;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -444,6 +446,15 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             homeScoreLabel.setText(String.valueOf(homeScore));
         }
         
+        // 保存到数据库
+        if (databaseManager != null && currentMatchId > 0) {
+            try {
+                databaseManager.saveQuarterScore(currentMatchId, currentQuarter, homeScore, awayScore);
+                System.out.println("龙都F4得分更新: +" + points + ", 当前比分: " + homeScore + ":" + awayScore);
+            } catch (Exception e) {
+                System.err.println("保存龙都F4得分失败: " + e.getMessage());
+            }
+        }
 
         // 检查游戏是否结束
         checkGameEnd();
@@ -463,11 +474,76 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             awayScoreLabel.setText(String.valueOf(awayScore));
         }
         
+        // 保存到数据库
+        if (databaseManager != null && currentMatchId > 0) {
+            try {
+                databaseManager.saveQuarterScore(currentMatchId, currentQuarter, homeScore, awayScore);
+                System.out.println("暴风队得分更新: +" + points + ", 当前比分: " + homeScore + ":" + awayScore);
+            } catch (Exception e) {
+                System.err.println("保存暴风队得分失败: " + e.getMessage());
+            }
+        }
 
         // 检查游戏是否结束
         checkGameEnd();
         
         System.out.println("暴风队当前节次得分更新: " + awayScore);
+    }
+    
+    /**
+     * 直接设置龙都F4得分（不累加）
+     */
+    private void setHomeScore(int score) {
+        homeScore = score;
+        if (homeScore < 0) homeScore = 0;
+        
+        // 更新UI显示 - 中间区域显示当前节次比分
+        if (homeScoreLabel != null) {
+            homeScoreLabel.setText(String.valueOf(homeScore));
+        }
+        
+        // 保存到数据库
+        if (databaseManager != null && currentMatchId > 0) {
+            try {
+                databaseManager.saveQuarterScore(currentMatchId, currentQuarter, homeScore, awayScore);
+                System.out.println("龙都F4得分直接设置: " + score + ", 当前比分: " + homeScore + ":" + awayScore);
+            } catch (Exception e) {
+                System.err.println("保存龙都F4得分失败: " + e.getMessage());
+            }
+        }
+
+        // 检查游戏是否结束
+        checkGameEnd();
+        
+        System.out.println("龙都F4当前节次得分直接设置: " + homeScore);
+    }
+    
+    /**
+     * 直接设置暴风队得分（不累加）
+     */
+    private void setAwayScore(int score) {
+        awayScore = score;
+        if (awayScore < 0) awayScore = 0;
+        
+        // 更新UI显示 - 中间区域显示当前节次比分
+        if (awayScoreLabel != null) {
+            awayScoreLabel.setText(String.valueOf(awayScore));
+        }
+        
+        // 保存到数据库
+        if (databaseManager != null && currentMatchId > 0) {
+            try {
+                databaseManager.saveQuarterScore(currentMatchId, currentQuarter, homeScore, awayScore);
+                System.out.println("暴风队得分直接设置: " + score + ", 当前比分: " + homeScore + ":" + awayScore);
+            } catch (Exception e) {
+                System.err.println("保存暴风队得分失败: " + e.getMessage());
+            }
+        }
+
+        // 检查游戏是否结束
+        checkGameEnd();
+        
+        System.out.println("暴风队当前节次得分直接设置: " + awayScore);
     }
     
     /**
@@ -501,7 +577,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         System.out.println("开始倒计时: " + countdownTime + "秒");
         
         // 播报开始信息
-        WindowsTTS.speakAsync("开始倒计时，15秒");
+//        WindowsTTS.speakAsync("开始倒计时，15秒");
     }
     
     /**
@@ -517,7 +593,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             System.out.println("继续倒计时: " + countdownTime + "秒");
             
             // 播报继续信息
-            WindowsTTS.speakAsync("继续倒计时，" + countdownTime + "秒");
+//            WindowsTTS.speakAsync("继续倒计时，" + countdownTime + "秒");
         }
     }
     
@@ -544,7 +620,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             System.out.println("暂停倒计时，保存时间: " + savedCountdownTime + "秒");
             
             // 播报暂停信息
-            WindowsTTS.speakAsync("倒计时已暂停");
+//            WindowsTTS.speakAsync("倒计时已暂停");
         }
     }
     
@@ -561,7 +637,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         System.out.println("当前节次比分已重置");
         
         // 播报重置信息
-        WindowsTTS.speakAsync("当前节次比分已重置");
+//        WindowsTTS.speakAsync("当前节次比分已重置");
     }
     
     /**
@@ -579,7 +655,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         System.out.println("重置倒计时");
         
         // 播报重置信息
-        WindowsTTS.speakAsync("倒计时已重置");
+//        WindowsTTS.speakAsync("倒计时已重置");
     }
     
     /**
@@ -601,6 +677,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             
         } else {
             // 时间到0
+            NBACountdown.playBuzzerSound();
             countdownTimer.stop();
             isCountdownRunning = false;
             playCountdownSound(0); // 播报"进攻结束"
@@ -622,11 +699,11 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         if (time > 0) {
             System.out.println("播报: " + time);
             // 使用 WindowsTTS 播报数字
-            WindowsTTS.speakAsync(String.valueOf(time));
+//            WindowsTTS.speakAsync(String.valueOf(time));
         } else {
             System.out.println("播报: 进攻结束");
             // 使用 WindowsTTS 播报"进攻结束"
-            WindowsTTS.speakAsync("进攻结束");
+//            WindowsTTS.speakAsync("进攻结束");
         }
     }
     
@@ -843,6 +920,16 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                                 updateAwayScore(awayPoints);
                                 showScorePanel();
                                 break;
+                            case "SET_HOME_SCORE":
+                                int setHomeScore = Integer.parseInt(value);
+                                setHomeScore(setHomeScore);
+                                showScorePanel();
+                                break;
+                            case "SET_AWAY_SCORE":
+                                int setAwayScore = Integer.parseInt(value);
+                                setAwayScore(setAwayScore);
+                                showScorePanel();
+                                break;
                             case "HOME_TEAM":
                                 setHomeTeam(value);
                                 showScorePanel();
@@ -859,7 +946,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                                 break;
                             case "STOP_COUNTDOWN":
                                 stopCountdown();
-                                showScorePanel();
+//                                showScorePanel();
                                 break;
                             case "RESET_COUNTDOWN":
                                 resetCountdown();
@@ -911,10 +998,10 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                             updateQuarterScoresDisplay();
                             
                             // 播报保存成功信息
-                            WindowsTTS.speakAsync("第" + currentQuarter + "节比分已保存");
+//                            WindowsTTS.speakAsync("第" + currentQuarter + "节比分已保存");
                         } else {
                             System.err.println("第" + currentQuarter + "节比分保存失败");
-                            WindowsTTS.speakAsync("第" + currentQuarter + "节比分保存失败");
+//                            WindowsTTS.speakAsync("第" + currentQuarter + "节比分保存失败");
                         }
                     } catch (Exception e) {
                         System.err.println("保存节次比分时出错: " + e.getMessage());
@@ -975,7 +1062,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                 updateQuarterLabels();
                 
                 // 播报节次变更
-                WindowsTTS.speakAsync("进入第" + currentQuarter + "节");
+//                WindowsTTS.speakAsync("进入第" + currentQuarter + "节");
                 
                 System.out.println("节次已变更到第" + currentQuarter + "节，比分已重置");
                 
@@ -1050,7 +1137,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                     }
                     
                     System.out.println("新建比赛: " + matchName + ", 备注: " + matchNote);
-                    WindowsTTS.speakAsync("新建比赛：" + matchName);
+//                    WindowsTTS.speakAsync("新建比赛：" + matchName);
                 }
             }
         } catch (Exception e) {
@@ -1085,7 +1172,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                     updateQuarterScoresDisplay();
                     
                     // 播报选择比赛信息
-                    WindowsTTS.speakAsync("已选择比赛：" + currentMatchName);
+//                    WindowsTTS.speakAsync("已选择比赛：" + currentMatchName);
                     
                     System.out.println("已选择比赛: " + currentMatchName);
                 }
@@ -1220,7 +1307,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                     updateQuarterScoresDisplay();
                     
                     // 播报同步信息
-                    WindowsTTS.speakAsync("分数已同步，当前比分 " + totalHomeScore + " 比 " + totalAwayScore);
+//                    WindowsTTS.speakAsync("分数已同步，当前比分 " + totalHomeScore + " 比 " + totalAwayScore);
                     System.out.println("同步完成，总分: " + totalHomeScore + "-" + totalAwayScore);
                     
                     // 向手机端发送同步后的数据，确保数据一致
@@ -1230,17 +1317,17 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                     showScorePanel();
                 } else {
                     System.out.println("没有找到节次比分数据");
-                    WindowsTTS.speakAsync("没有找到比分数据");
+//                    WindowsTTS.speakAsync("没有找到比分数据");
                 }
                 
             } catch (Exception e) {
                 System.err.println("处理同步所有分数命令失败: " + e.getMessage());
                 e.printStackTrace();
-                WindowsTTS.speakAsync("同步分数失败");
+//                WindowsTTS.speakAsync("同步分数失败");
             }
         } else {
             System.err.println("数据库管理器未初始化或当前比赛ID无效");
-            WindowsTTS.speakAsync("无法同步，请先创建比赛");
+//            WindowsTTS.speakAsync("无法同步，请先创建比赛");
         }
     }
     
@@ -1315,12 +1402,12 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                         updateQuarterScoresDisplay();
                         
                         // 播报选择上一节信息
-                        WindowsTTS.speakAsync("已选择第" + quarterNumber + "节，比分：" + homeScore + "比" + awayScore);
+//                        WindowsTTS.speakAsync("已选择第" + quarterNumber + "节，比分：" + homeScore + "比" + awayScore);
                         
                         System.out.println("已选择第" + quarterNumber + "节，比分：" + homeScore + ":" + awayScore);
                     } else {
                         System.err.println("未找到第" + quarterNumber + "节的比分记录");
-                        WindowsTTS.speakAsync("未找到第" + quarterNumber + "节的比分记录");
+//                        WindowsTTS.speakAsync("未找到第" + quarterNumber + "节的比分记录");
                     }
                 }
             }
@@ -1368,12 +1455,12 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                         updateQuarterScoresDisplay();
                         
                         // 播报修改成功信息
-                        WindowsTTS.speakAsync("第" + quarterNumber + "节比分已修改为：" + newHomeScore + "比" + newAwayScore);
+//                        WindowsTTS.speakAsync("第" + quarterNumber + "节比分已修改为：" + newHomeScore + "比" + newAwayScore);
                         
                         System.out.println("第" + quarterNumber + "节比分修改成功：" + newHomeScore + ":" + newAwayScore);
                     } else {
                         System.err.println("第" + quarterNumber + "节比分修改失败");
-                        WindowsTTS.speakAsync("第" + quarterNumber + "节比分修改失败");
+//                        WindowsTTS.speakAsync("第" + quarterNumber + "节比分修改失败");
                     }
                 }
             }
@@ -1544,6 +1631,8 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             System.err.println("更新总比分显示失败: " + e.getMessage());
         }
     }
+    
+
     
     /**
      * 检查比赛是否结束（总分达到100分）
