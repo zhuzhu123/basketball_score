@@ -1,0 +1,17 @@
+// settings.gradle
+pluginManagement {
+    repositories {
+        google()  // 必须同步声明
+        mavenCentral()
+        gradlePluginPortal() // 可选但推荐
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS) // 或 PREFER_PROJECT
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "Basketball Score Remote"
+include ':app'

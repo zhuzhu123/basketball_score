@@ -1,0 +1,17 @@
+// 项目根目录下的 build.gradle
+buildscript {
+    repositories {
+        google()         // 必须！Android Gradle Plugin 只在这里分发
+        mavenCentral()   // 必须！其他库在这里
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.2.0"      // AGP
+    }
+}
+
+allprojects {
+    repositories {
+        google()       // 所有模块共用
+        mavenCentral() // 所有模块共用
+    }
+}

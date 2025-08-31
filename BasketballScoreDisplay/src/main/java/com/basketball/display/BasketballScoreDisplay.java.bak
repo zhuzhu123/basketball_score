@@ -1,0 +1,578 @@
+package com.basketball.display;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.*;
+import java.net.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * 篮球比分显示程序
+ * 通过蓝牙接收Android系统的比分数据并显示
+ */
+public class BasketballScoreDisplay extends JFrame {
+    
+    // UI组件
+    private JLabel homeTeamLabel;
+    private JLabel awayTeamLabel;
+    private JLabel homeScoreLabel;
+    private JLabel awayScoreLabel;
+    private JLabel timerLabel;
+    private JLabel statusLabel;
+    private JLabel quarterLabel;
+    
+    // 数据
+    private int homeScore = 0;
+    private int awayScore = 0;
+    private int currentQuarter = 1;
+    private int remainingTime = 16; // 12分钟 = 720秒
+    private boolean isTimerRunning = false;
+    
+    // 定时器
+    private ScheduledExecutorService timerExecutor;
+    private Timer swingTimer;
+    
+    // 配置
+    private static final int PORT = 8888;
+    private static final String DEVICE_FILTER = "篮球上报系统";
+    
+    public BasketballScoreDisplay() {
+        initializeUI();
+        initializeTimer();
+    }
+    
+    /**
+     * 初始化用户界面
+     */
+    private void initializeUI() {
+        setTitle("篮球比分显示系统");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+        setResizable(false);
+        
+        // 主面板
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+        mainPanel.setBackground(new Color(240, 240, 240));
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        // 顶部状态栏
+        JPanel statusPanel = createStatusPanel();
+        mainPanel.add(statusPanel, BorderLayout.NORTH);
+        
+        // 中央比分显示
+        JPanel scorePanel = createScorePanel();
+        mainPanel.add(scorePanel, BorderLayout.CENTER);
+        
+        // 底部控制面板
+        JPanel controlPanel = createControlPanel();
+        mainPanel.add(controlPanel, BorderLayout.SOUTH);
+        
+        setContentPane(mainPanel);
+    }
+    
+    /**
+     * 创建状态面板
+     */
+    private JPanel createStatusPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        panel.setBackground(new Color(70, 130, 180));
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        statusLabel = new JLabel("等待设备连接... (端口: " + PORT + ")");
+        statusLabel.setForeground(Color.WHITE);
+        statusLabel.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        
+        panel.add(statusLabel);
+        return panel;
+    }
+    
+    /**
+     * 创建比分显示面板
+     */
+    private JPanel createScorePanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridLayout(3, 1, 20, 20));
+        panel.setBackground(new Color(240, 240, 240));
+        
+        // 节次显示
+        JPanel quarterPanel = new JPanel();
+        quarterPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        quarterPanel.setBackground(Color.WHITE);
+        quarterPanel.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 2));
+        
+        quarterLabel = new JLabel("第1节");
+        quarterLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
+        quarterLabel.setForeground(new Color(70, 130, 180));
+        quarterPanel.add(quarterLabel);
+        
+        // 比分显示
+        JPanel scoreDisplayPanel = new JPanel();
+        scoreDisplayPanel.setLayout(new GridLayout(1, 3, 20, 0));
+        scoreDisplayPanel.setBackground(Color.WHITE);
+        scoreDisplayPanel.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 2));
+        
+        // 龙都F4
+        JPanel homePanel = new JPanel();
+        homePanel.setLayout(new BoxLayout(homePanel, BoxLayout.Y_AXIS));
+        homePanel.setBackground(Color.WHITE);
+        
+        homeTeamLabel = new JLabel("龙都F4");
+        homeTeamLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
+        homeTeamLabel.setForeground(new Color(220, 20, 60));
+        homeTeamLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        homeScoreLabel = new JLabel("0");
+        homeScoreLabel.setFont(new Font("微软雅黑", Font.BOLD, 48));
+        homeScoreLabel.setForeground(new Color(220, 20, 60));
+        homeScoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        homePanel.add(homeTeamLabel);
+        homePanel.add(Box.createVerticalStrut(10));
+        homePanel.add(homeScoreLabel);
+        
+        // 分隔符
+        JLabel vsLabel = new JLabel("VS");
+        vsLabel.setFont(new Font("微软雅黑", Font.BOLD, 36));
+        vsLabel.setForeground(new Color(70, 130, 180));
+        vsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        vsLabel.setAlignmentY(Component.CENTER_ALIGNMENT);
+        
+        // 暴风队
+        JPanel awayPanel = new JPanel();
+        awayPanel.setLayout(new BoxLayout(awayPanel, BoxLayout.Y_AXIS));
+        awayPanel.setBackground(Color.WHITE);
+        
+        awayTeamLabel = new JLabel("暴风队");
+        awayTeamLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
+        awayTeamLabel.setForeground(new Color(30, 144, 255));
+        awayTeamLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        awayScoreLabel = new JLabel("0");
+        awayScoreLabel.setFont(new Font("微软雅黑", Font.BOLD, 48));
+        awayScoreLabel.setForeground(new Color(30, 144, 255));
+        awayScoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        awayPanel.add(awayTeamLabel);
+        awayPanel.add(Box.createVerticalStrut(10));
+        awayPanel.add(awayScoreLabel);
+        
+        scoreDisplayPanel.add(homePanel);
+        scoreDisplayPanel.add(vsLabel);
+        scoreDisplayPanel.add(awayPanel);
+        
+        // 倒计时显示
+        JPanel timerPanel = new JPanel();
+        timerPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        timerPanel.setBackground(Color.WHITE);
+        timerPanel.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 2));
+        
+        timerLabel = new JLabel("12:00");
+        timerLabel.setFont(new Font("微软雅黑", Font.BOLD, 36));
+        timerLabel.setForeground(new Color(70, 130, 180));
+        timerPanel.add(timerLabel);
+        
+        panel.add(quarterPanel);
+        panel.add(scoreDisplayPanel);
+        panel.add(timerPanel);
+        
+        return panel;
+    }
+    
+    /**
+     * 创建控制面板
+     */
+    private JPanel createControlPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        panel.setBackground(new Color(70, 130, 180));
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        JButton resetButton = new JButton("重置比分");
+        resetButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        resetButton.addActionListener(e -> resetScore());
+        
+        JButton startTimerButton = new JButton("开始计时");
+        startTimerButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        startTimerButton.addActionListener(e -> startTimer());
+        
+        JButton pauseTimerButton = new JButton("暂停计时");
+        pauseTimerButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        pauseTimerButton.addActionListener(e -> pauseTimer());
+        
+        JButton nextQuarterButton = new JButton("下一节");
+        nextQuarterButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        nextQuarterButton.addActionListener(e -> nextQuarter());
+        
+        panel.add(resetButton);
+        panel.add(startTimerButton);
+        panel.add(pauseTimerButton);
+        panel.add(nextQuarterButton);
+        
+        return panel;
+    }
+    
+    /**
+     * 初始化定时器
+     */
+    private void initializeTimer() {
+        swingTimer = new Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (isTimerRunning && remainingTime > 0) {
+                    remainingTime--;
+                    updateTimerDisplay();
+                } else if (remainingTime <= 0) {
+                    isTimerRunning = false;
+                    swingTimer.stop();
+                    JOptionPane.showMessageDialog(BasketballScoreDisplay.this, 
+                        "时间到！", "计时结束", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        });
+    }
+    
+    /**
+     * 验证设备是否有效
+     */
+    private boolean isValidDevice(String address) {
+        // 允许所有连接，因为这是通过TCP网络连接
+        return true;
+    }
+    
+    /**
+     * 处理客户端连接
+     */
+    private void handleClientConnection() {
+        // 此方法已不再使用，连接由BluetoothManager处理
+    }
+    
+    /**
+     * 处理比分数据
+     */
+    private void processScoreData(String data) {
+        try {
+            System.out.println("收到原始数据: " + data);
+            
+            // 处理连续的命令字符串，如 "HOME_SCORE:1SAVE_QUARTER:1|13|19"
+            // 需要先按命令分割，再按值分割
+            String[] commands = data.split("(?=[A-Z_]+:)");
+            
+            for (String command : commands) {
+                if (command.trim().isEmpty()) {
+                    continue;
+                }
+                
+                // 解析单个命令：COMMAND:VALUE
+                String[] parts = command.split(":", 2); // 最多分割2次，避免值中包含冒号
+                if (parts.length >= 2) {
+                    String cmd = parts[0].trim();
+                    String value = parts[1].trim();
+                    
+                    System.out.println("解析命令: " + cmd + " = " + value);
+                    
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            switch (cmd) {
+                                case "HOME_SCORE":
+                                    int homePoints = Integer.parseInt(value);
+                                    updateHomeScore(homePoints);
+                                    break;
+                                case "AWAY_SCORE":
+                                    int awayPoints = Integer.parseInt(value);
+                                    updateAwayScore(awayPoints);
+                                    break;
+                                case "RESET":
+                                    resetScore();
+                                    break;
+                                case "QUARTER":
+                                    int quarter = Integer.parseInt(value);
+                                    setQuarter(quarter);
+                                    break;
+                                case "TIMER_START":
+                                    startTimer();
+                                    break;
+                                case "TIMER_PAUSE":
+                                    pauseTimer();
+                                    break;
+                                case "TIMER_SET":
+                                    int timerSeconds = Integer.parseInt(value);
+                                    setTimer(timerSeconds);
+                                    break;
+                                case "HOME_TEAM":
+                                    setHomeTeam(value);
+                                    break;
+                                case "AWAY_TEAM":
+                                    setAwayTeam(value);
+                                    break;
+                                case "TIMEOUT":
+                                    handleTimeout(value);
+                                    break;
+                                case "RESET_SCORE":
+                                    resetScore();
+                                    break;
+                                case "TIMER":
+                                    handleTimerCommand(value);
+                                    break;
+                                case "SAVE_QUARTER":
+                                    handleSaveQuarterCommand(value);
+                                    break;
+                                case "SAVE_MATCH":
+                                    handleSaveMatchCommand(value);
+                                    break;
+                                default:
+                                    System.out.println("未知命令: " + cmd + " = " + value);
+                            }
+                        } catch (NumberFormatException e) {
+                            System.err.println("数值解析错误 - 命令: " + cmd + ", 值: " + value + ", 错误: " + e.getMessage());
+                        } catch (Exception e) {
+                            System.err.println("处理命令错误 - 命令: " + cmd + ", 值: " + value + ", 错误: " + e.getMessage());
+                        }
+                    });
+                } else if (command.trim().equals("RESET_SCORE")) {
+                    // 处理无参数的命令
+                    SwingUtilities.invokeLater(() -> resetScore());
+                } else {
+                    System.out.println("无法解析的命令格式: " + command);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("数据解析错误: " + data + ", 错误: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 发送确认消息给连接的设备
+     */
+    private void sendConfirmation(String message) {
+        // 移除蓝牙相关代码
+    }
+    
+    /**
+     * 更新龙都F4得分
+     */
+    private void updateHomeScore(int points) {
+        homeScore = Math.max(0, homeScore + points);
+        homeScoreLabel.setText(String.valueOf(homeScore));
+        sendConfirmation("龙都F4得分已更新: " + homeScore);
+    }
+    
+    /**
+     * 更新暴风队得分
+     */
+    private void updateAwayScore(int points) {
+        awayScore = Math.max(0, awayScore + points);
+        awayScoreLabel.setText(String.valueOf(awayScore));
+        sendConfirmation("暴风队得分已更新: " + awayScore);
+    }
+    
+    /**
+     * 重置比分
+     */
+    private void resetScore() {
+        homeScore = 0;
+        awayScore = 0;
+        homeScoreLabel.setText("0");
+        awayScoreLabel.setText("0");
+        currentQuarter = 1;
+        quarterLabel.setText("第" + currentQuarter + "节");
+        remainingTime = 720;
+        updateTimerDisplay();
+        isTimerRunning = false;
+        swingTimer.stop();
+    }
+    
+    /**
+     * 设置节次
+     */
+    private void setQuarter(int quarter) {
+        currentQuarter = Math.max(1, Math.min(4, quarter));
+        quarterLabel.setText("第" + currentQuarter + "节");
+    }
+    
+    /**
+     * 下一节
+     */
+    private void nextQuarter() {
+        if (currentQuarter < 4) {
+            currentQuarter++;
+            quarterLabel.setText("第" + currentQuarter + "节");
+            remainingTime = 720; // 重置为12分钟
+            updateTimerDisplay();
+            isTimerRunning = false;
+            swingTimer.stop();
+        } else {
+            JOptionPane.showMessageDialog(this, "已经是最后一节了！", "提示", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    /**
+     * 开始计时
+     */
+    private void startTimer() {
+        if (!isTimerRunning && remainingTime > 0) {
+            isTimerRunning = true;
+            swingTimer.start();
+        }
+    }
+    
+    /**
+     * 暂停计时
+     */
+    private void pauseTimer() {
+        isTimerRunning = false;
+        swingTimer.stop();
+    }
+    
+    /**
+     * 设置计时器时间
+     */
+    private void setTimer(int seconds) {
+        remainingTime = Math.max(0, seconds);
+        updateTimerDisplay();
+    }
+    
+    /**
+     * 设置龙都F4名称
+     */
+    private void setHomeTeam(String teamName) {
+        homeTeamLabel.setText(teamName);
+    }
+    
+    /**
+     * 设置暴风队名称
+     */
+    private void setAwayTeam(String teamName) {
+        awayTeamLabel.setText(teamName);
+    }
+    
+    /**
+     * 处理超时命令
+     */
+    private void handleTimeout(String value) {
+        try {
+            int quarter = Integer.parseInt(value);
+            if (quarter >= 1 && quarter <= 4) {
+                setQuarter(quarter);
+                remainingTime = 720; // 重置为12分钟
+                updateTimerDisplay();
+                isTimerRunning = false;
+                swingTimer.stop();
+                updateStatus("已切换到第" + quarter + "节");
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("无效的节次值: " + value);
+        }
+    }
+    
+    /**
+     * 处理计时器命令
+     */
+    private void handleTimerCommand(String value) {
+        try {
+            int seconds = Integer.parseInt(value);
+            setTimer(seconds);
+            updateStatus("计时器已设置为: " + String.format("%02d:%02d", seconds/60, seconds%60));
+        } catch (NumberFormatException e) {
+            System.err.println("无效的计时器命令值: " + value);
+        }
+    }
+    
+    /**
+     * 处理保存节次命令
+     */
+    private void handleSaveQuarterCommand(String value) {
+        try {
+            String[] parts = value.split("\\|");
+            if (parts.length >= 3) {
+                int quarter = Integer.parseInt(parts[0]);
+                int homeScore = Integer.parseInt(parts[1]);
+                int awayScore = Integer.parseInt(parts[2]);
+                
+                updateStatus("保存第" + quarter + "节比分: " + homeScore + "-" + awayScore);
+                System.out.println("保存第" + quarter + "节比分: " + homeScore + "-" + awayScore);
+            } else {
+                System.err.println("保存节次命令格式错误: " + value);
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("保存节次命令数值解析错误: " + value + ", 错误: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("处理保存节次命令错误: " + value + ", 错误: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 处理保存比赛命令
+     */
+    private void handleSaveMatchCommand(String value) {
+        try {
+            String[] parts = value.split("\\|");
+            if (parts.length >= 3) {
+                String matchName = parts[0];
+                int totalHomeScore = Integer.parseInt(parts[1]);
+                int totalAwayScore = Integer.parseInt(parts[2]);
+                
+                updateStatus("保存比赛: " + matchName + " 总分: " + totalHomeScore + "-" + totalAwayScore);
+                System.out.println("保存比赛: " + matchName + " 总分: " + totalHomeScore + "-" + totalAwayScore);
+            } else {
+                System.err.println("保存比赛命令格式错误: " + value);
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("保存比赛命令数值解析错误: " + value + ", 错误: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("处理保存比赛命令错误: " + value + ", 错误: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 更新计时器显示
+     */
+    private void updateTimerDisplay() {
+        int minutes = remainingTime / 60;
+        int seconds = remainingTime % 60;
+        timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+    }
+    
+    /**
+     * 更新状态显示
+     */
+    private void updateStatus(String message) {
+        SwingUtilities.invokeLater(() -> {
+            statusLabel.setText(message);
+            System.out.println("状态: " + message);
+        });
+    }
+    
+    /**
+     * 关闭连接
+     */
+    private void closeConnection() {
+        // 移除蓝牙相关代码
+    }
+    
+    /**
+     * 主方法
+     */
+    public static void main(String[] args) {
+        // 设置系统外观
+        try {
+            String systemLookAndFeel = UIManager.getSystemLookAndFeelClassName();
+            UIManager.setLookAndFeel(systemLookAndFeel);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        SwingUtilities.invokeLater(() -> {
+            BasketballScoreDisplay frame = new BasketballScoreDisplay();
+            frame.setVisible(true);
+        });
+    }
+} 

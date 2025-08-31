@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>篮球计分应用图标生成器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #FF6B35;
+            text-align: center;
+        }
+        .icon-preview {
+            text-align: center;
+            margin: 20px 0;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        button {
+            background: #FF6B35;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #E55A2B;
+        }
+        .download-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .size-info {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏀 篮球计分应用图标生成器</h1>
+        
+        <div class="size-info">
+            <h3>Android图标尺寸说明：</h3>
+            <ul>
+                <li><strong>mdpi:</strong> 48x48 像素</li>
+                <li><strong>hdpi:</strong> 72x72 像素</li>
+                <li><strong>xhdpi:</strong> 96x96 像素</li>
+                <li><strong>xxhdpi:</strong> 144x144 像素</li>
+                <li><strong>xxxhdpi:</strong> 192x192 像素</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <button onclick="generateAllIcons()">生成所有尺寸图标</button>
+            <button onclick="downloadAllIcons()">下载所有图标</button>
+        </div>
+
+        <div class="icon-preview">
+            <h3>图标预览：</h3>
+            <canvas id="preview48" width="48" height="48"></canvas>
+            <canvas id="preview72" width="72" height="72"></canvas>
+            <canvas id="preview96" width="96" height="96"></canvas>
+            <canvas id="preview144" width="144" height="144"></canvas>
+            <canvas id="preview192" width="192" height="192"></canvas>
+        </div>
+
+        <div class="download-section">
+            <h3>下载说明：</h3>
+            <p>1. 点击"生成所有尺寸图标"按钮生成预览</p>
+            <p>2. 点击"下载所有图标"按钮下载ZIP文件</p>
+            <p>3. 解压后将图标文件放入对应的mipmap目录</p>
+            <p>4. 确保文件名分别为：<code>ic_launcher.png</code> 和 <code>ic_launcher_round.png</code></p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        function drawBasketballIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            const center = size / 2;
+            const radius = size * 0.45;
+            
+            // 清空画布
+            ctx.clearRect(0, 0, size, size);
+            
+            // 绘制背景圆形
+            ctx.beginPath();
+            ctx.arc(center, center, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FF6B35';
+            ctx.fill();
+            ctx.strokeStyle = '#E55A2B';
+            ctx.lineWidth = Math.max(1, size / 50);
+            ctx.stroke();
+            
+            // 绘制篮球纹理线条
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = Math.max(1, size / 50);
+            
+            // 水平线
+            ctx.beginPath();
+            ctx.moveTo(center - radius / 2, center);
+            ctx.lineTo(center + radius / 2, center);
+            ctx.stroke();
+            
+            // 垂直线
+            ctx.beginPath();
+            ctx.moveTo(center, center - radius / 2);
+            ctx.lineTo(center, center + radius / 2);
+            ctx.stroke();
+            
+            // 绘制中心计分圆圈
+            const innerRadius = radius * 0.4;
+            ctx.beginPath();
+            ctx.arc(center, center, innerRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+            
+            // 绘制内圈
+            const innerInnerRadius = innerRadius * 0.8;
+            ctx.beginPath();
+            ctx.arc(center, center, innerInnerRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FF6B35';
+            ctx.fill();
+            
+            // 添加装饰性小圆点
+            const dotRadius = Math.max(2, size / 30);
+            const positions = [
+                [center - radius / 2, center - radius / 2],
+                [center + radius / 2, center - radius / 2],
+                [center - radius / 2, center + radius / 2],
+                [center + radius / 2, center + radius / 2]
+            ];
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            positions.forEach(pos => {
+                ctx.beginPath();
+                ctx.arc(pos[0], pos[1], dotRadius, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function generateAllIcons() {
+            const sizes = [48, 72, 96, 144, 192];
+            sizes.forEach(size => {
+                const canvas = document.getElementById(`preview${size}`);
+                drawBasketballIcon(canvas, size);
+            });
+            alert('所有图标已生成完成！');
+        }
+
+        async function downloadAllIcons() {
+            const zip = new JSZip();
+            const sizes = [48, 72, 96, 144, 192];
+            const densities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
+            
+            for (let i = 0; i < sizes.length; i++) {
+                const size = sizes[i];
+                const density = densities[i];
+                const canvas = document.getElementById(`preview${size}`);
+                
+                // 将canvas转换为blob
+                canvas.toBlob(async (blob) => {
+                    const folder = zip.folder(`mipmap-${density}`);
+                    folder.file('ic_launcher.png', blob);
+                    folder.file('ic_launcher_round.png', blob);
+                    
+                    // 如果所有图标都处理完成，下载ZIP
+                    if (i === sizes.length - 1) {
+                        const content = await zip.generateAsync({type: 'blob'});
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(content);
+                        link.download = 'basketball_score_icons.zip';
+                        link.click();
+                    }
+                }, 'image/png');
+            }
+        }
+
+        // 页面加载时生成预览
+        window.onload = function() {
+            generateAllIcons();
+        };
+    </script>
+</body>
+</html> 
