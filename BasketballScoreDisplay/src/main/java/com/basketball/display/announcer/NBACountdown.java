@@ -51,6 +51,22 @@ public class NBACountdown {
         }
     }
 
+    public static void playCountDownSound() {
+        try {
+            // 尝试播放自定义声音文件
+            File soundFile = new File("G:\\DownLoad\\countdown.wav");
+            if (soundFile.exists()) {
+                playCustomSound(soundFile);
+            } else {
+                // 如果没有找到文件，使用系统蜂鸣
+                System.out.println("⚠️ 未找到声音文件，使用系统蜂鸣");
+                System.out.println("\7\7\7"); // ASCII蜂鸣字符
+            }
+        } catch (Exception e) {
+            System.err.println("播放声音出错: " + e.getMessage());
+        }
+    }
+
     private static void playCustomSound(File soundFile)
         throws IOException, UnsupportedAudioFileException, LineUnavailableException, InterruptedException {
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(soundFile);

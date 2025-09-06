@@ -37,8 +37,8 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
     private String awayTeam = "暴风队";
     private int homeScore = 0;
     private int awayScore = 0;
-    private int countdownTime = 15; // 倒计时时间
-    private int savedCountdownTime = 15; // 保存的倒计时时间
+    private int countdownTime = 20; // 倒计时时间
+    private int savedCountdownTime = 20; // 保存的倒计时时间
     
     // 状态
     private boolean isCountdownMode = false;
@@ -155,7 +155,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         homeTeamLabel.setForeground(HOME_COLOR);
         
         homeScoreLabel = new JLabel("0", SwingConstants.CENTER);
-        homeScoreLabel.setFont(new Font("Arial", Font.BOLD, 200));
+        homeScoreLabel.setFont(new Font("Arial", Font.BOLD, 400));
         homeScoreLabel.setForeground(HOME_COLOR);
         
         homePanel.add(homeTeamLabel, BorderLayout.NORTH);
@@ -163,20 +163,19 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         
         // 比分分隔符
         JLabel separatorLabel = new JLabel(":", SwingConstants.CENTER);
-        separatorLabel.setFont(new Font("Arial", Font.BOLD, 200));
+        separatorLabel.setFont(new Font("Arial", Font.BOLD, 400));
         separatorLabel.setForeground(TEXT_COLOR);
         
         // 暴风队比分
         JPanel awayPanel = new JPanel();
         awayPanel.setLayout(new BorderLayout());
         awayPanel.setBackground(BACKGROUND_COLOR);
-        
         awayTeamLabel = new JLabel("暴风队", SwingConstants.CENTER);
         awayTeamLabel.setFont(new Font("微软雅黑", Font.BOLD, 48));
         awayTeamLabel.setForeground(AWAY_COLOR);
         
         awayScoreLabel = new JLabel("0", SwingConstants.CENTER);
-        awayScoreLabel.setFont(new Font("Arial", Font.BOLD, 200));
+        awayScoreLabel.setFont(new Font("Arial", Font.BOLD, 400 ));
         awayScoreLabel.setForeground(AWAY_COLOR);
         
         awayPanel.add(awayTeamLabel, BorderLayout.NORTH);
@@ -329,7 +328,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         
         // 倒计时显示
         countdownLabel = new JLabel(String.valueOf(countdownTime), SwingConstants.CENTER);
-        countdownLabel.setFont(new Font("Arial", Font.BOLD, 400));
+        countdownLabel.setFont(new Font("Arial", Font.BOLD, 700));
         countdownLabel.setForeground(COUNTDOWN_COLOR);
         
         countdownPanel.add(countdownLabel, BorderLayout.CENTER);
@@ -568,7 +567,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
      * 开始倒计时
      */
     private void startCountdown() {
-        countdownTime = 15; // 每次从15秒开始
+        countdownTime = 20; // 每次从15秒开始
         savedCountdownTime = countdownTime;
         isCountdownMode = true;
         isCountdownRunning = true;
@@ -647,8 +646,8 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         if (countdownTimer != null && countdownTimer.isRunning()) {
             countdownTimer.stop();
         }
-        countdownTime = 15;
-        savedCountdownTime = 15;
+        countdownTime = 20;
+        savedCountdownTime = 20;
         isCountdownRunning = false;
         countdownLabel.setText(String.valueOf(countdownTime));
         countdownLabel.setForeground(COUNTDOWN_COLOR);
@@ -669,9 +668,14 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             // 时间小于等于6秒时变红色并播报
             if (countdownTime <= 6) {
                 countdownLabel.setForeground(COUNTDOWN_WARNING_COLOR);
-                playCountdownSound(countdownTime);
+//                playCountdownSound(countdownTime);
+
             }
-            
+            if (countdownTime == 5) {
+                new Thread(() -> {
+                    NBACountdown.playCountDownSound();
+                }).start();
+            }
             // 更新保存的时间
             savedCountdownTime = countdownTime;
             
@@ -683,7 +687,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             playCountdownSound(0); // 播报"进攻结束"
             
             // 2秒后返回比分页面
-            Timer delayTimer = new Timer(2000, e -> {
+            Timer delayTimer = new Timer(200, e -> {
                 showScorePanel();
                 ((Timer)e.getSource()).stop();
             });
@@ -798,7 +802,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
         totalScorePanel.setBackground(BACKGROUND_COLOR);
         
         totalScoreLabel = new JLabel("总比分：0 - 0");
-        totalScoreLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
+        totalScoreLabel.setFont(new Font("微软雅黑", Font.BOLD, 100 ));
         totalScoreLabel.setForeground(new Color(255, 215, 0)); // 金色
         
         totalScorePanel.add(totalScoreLabel);
@@ -1256,7 +1260,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
                             updateMatchInfoDisplay();
                             
                             System.out.println("比赛总分计算完成: " + calculatedTotalHomeScore + ":" + calculatedTotalAwayScore);
-                            WindowsTTS.speakAsync("比赛总分计算完成，龙都F4：" + calculatedTotalHomeScore + "分，暴风队：" + calculatedTotalAwayScore + "分");
+//                            WindowsTTS.speakAsync("比赛总分计算完成，龙都F4：" + calculatedTotalHomeScore + "分，暴风队：" + calculatedTotalAwayScore + "分");
                             
                         } catch (Exception e) {
                             System.err.println("计算比赛总分时出错: " + e.getMessage());
@@ -1643,7 +1647,7 @@ public class BasketballFullScreenDisplay extends JFrame implements KeyListener {
             String message = winner + "获胜！比赛结束！";
             
             // 语音播报
-            WindowsTTS.speakAsync(message);
+//            WindowsTTS.speakAsync(message);
             
             // 显示消息
             JOptionPane.showMessageDialog(this, message, "比赛结束", JOptionPane.INFORMATION_MESSAGE);

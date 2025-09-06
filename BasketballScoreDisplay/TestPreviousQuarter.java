@@ -83,7 +83,7 @@ public class TestPreviousQuarter {
         int quarterNumber = 2;
         int oldHomeScore = 15;
         int oldAwayScore = 12;
-        int newHomeScore = 18;
+        int newHomeScore = 20;
         int newAwayScore = 14;
         
         System.out.println("比赛ID: " + matchId);
